@@ -3,12 +3,13 @@
 #include <sstream>
 #include <string>
 #include <vector>
-#include <cstdlib> // atoi
+#include <cstdlib> // atoi, atof
 #include <set>
 #include <algorithm> // all_of
 #include <cctype> // isspace
 #include "tweet.h"
 #include "file_io.h"
+#include "util.h"
 
 /* Read the tweets and return the number of tweets read */
 int readInputFile(const char *filename, std::vector<Tweet>& tweets, unsigned int& neighbors) {
@@ -16,7 +17,7 @@ int readInputFile(const char *filename, std::vector<Tweet>& tweets, unsigned int
 	std::ifstream inputFile;
 	inputFile.open(filename);
 	if (!inputFile) {
-		return 0;
+		return IO_GENERAL_ERROR;
 	}
 
 
@@ -33,7 +34,7 @@ int readInputFile(const char *filename, std::vector<Tweet>& tweets, unsigned int
 	// Skip lines that are empty or contain only whitespaces
 	do {
 		if (!getline(inputFile, line)) {
-			return 0;
+			return IO_GENERAL_ERROR;
 		}
 	} while (line == "" || std::all_of(line.begin(), line.end(), isspace));
 
@@ -42,7 +43,7 @@ int readInputFile(const char *filename, std::vector<Tweet>& tweets, unsigned int
 	std::string temp;
 	// Get number of neighbors if it is given in the first line
 	if (!getline(lineStream, temp, ' ')) {
-		return 0;
+		return IO_GENERAL_ERROR;
 	}
 
 	if (temp.compare("P:") == 0) {
@@ -55,7 +56,7 @@ int readInputFile(const char *filename, std::vector<Tweet>& tweets, unsigned int
 		// The first line is a tweet
 		Tweet tweet;
 		if (tweet.readTweet(line) == false) {
-			return 0;
+			return IO_GENERAL_ERROR;
 		}
 
 		// First tweet ID
@@ -77,23 +78,23 @@ int readInputFile(const char *filename, std::vector<Tweet>& tweets, unsigned int
 
 		Tweet tweet;
 		if (tweet.readTweet(line) == false) {
-			return 0;
+			return IO_GENERAL_ERROR;
 		}
 
 		// Check if tweet ID already exists
 		unsigned int tweetID = tweet.getID();
 		if (tweetIdDs.insert(tweetID).second == false) {
-			return -1;
+			return IO_NOT_UNIQUE;
 		}
 
 		// Check if tweet ID and user ID are in increasing order
 		if (tweetID <= prevTweetID) {
-			return -2;
+			return IO_NOT_INCREASING;
 		}
 		prevTweetID = tweetID;
 		unsigned int userID = tweet.getUser();
 		if (userID < prevUserID) {
-			return -2;
+			return IO_NOT_INCREASING;
 		}
 
 		tweets.push_back(tweet);
@@ -101,4 +102,82 @@ int readInputFile(const char *filename, std::vector<Tweet>& tweets, unsigned int
 
 	inputFile.close();
 	return tweets.size();
+}
+
+
+
+bool readSentimentLexicon(const char *filename, std::unordered_map<std::string, double>&sentimentMap) {
+	// Open file for reading
+	std::ifstream inputFile;
+	inputFile.open(filename);
+	if (!inputFile) {
+		return false;
+	}
+
+	// Read every word mapping
+	std::string line;
+	while (getline(inputFile, line)) {
+		// Skip lines that are empty or contain only whitespaces
+		if (line == "" || std::all_of(line.begin(), line.end(), isspace)) {
+			continue;
+		}
+
+		// Convert line to stringstream
+		std::istringstream lineStream(line);
+		std::string word;
+		std::string sentiment;
+		// Get the word
+		if (!getline(lineStream, word, '\t')) {
+			return false;
+		}
+		// Get its sentiment
+		if (!getline(lineStream, sentiment)) {
+			return false;
+		}
+		if (!isNumber(sentiment)) {
+			return false;
+		}
+
+		// Save the word - sentiment mapping
+		sentimentMap[word] = atof(sentiment.c_str());
+	}
+
+	inputFile.close();
+	return true;
+}
+
+
+bool readCoins(const char *filename, std::vector< std::vector<std::string> >& coins) {
+	// Open file for reading
+	std::ifstream inputFile;
+	inputFile.open(filename);
+	if (!inputFile) {
+		return false;
+	}
+
+	// Read every word for each cryptocoin
+	std::string line;
+	while (getline(inputFile, line)) {
+		// Skip lines that are empty or contain only whitespaces
+		if (line == "" || std::all_of(line.begin(), line.end(), isspace)) {
+			continue;
+		}
+
+		std::vector<std::string> coinWords;
+
+		// Convert line to stringstream
+		std::istringstream lineStream(line);
+		std::string word;
+		while (getline(lineStream, word, '\t')) {
+			coinWords.push_back(word);
+		}
+		if (coinWords.size() == 0) {
+			return false;
+		}
+
+		coins.push_back(coinWords);
+	}
+
+	inputFile.close();
+	return true;
 }

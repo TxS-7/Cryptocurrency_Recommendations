@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <limits> // numeric_limits<streamsize>::max()
+#include <cctype> // tolower
 #include "util.h"
 
 bool isNumber(const std::string& str) {
@@ -73,4 +74,13 @@ unsigned int binToDec(const std::vector<int>& bits) {
 		}
 	}
 	return total;
+}
+
+
+std::string toLower(const std::string& str) {
+	std::string lower;
+	for (unsigned int i = 0; i < str.size(); i++) {
+		lower += tolower(str[i]);
+	}
+	return lower;
 }

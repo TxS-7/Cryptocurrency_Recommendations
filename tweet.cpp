@@ -1,9 +1,13 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <unordered_map>
+#include <algorithm> // std::fill
+#include <limits> // std::numeric_limits
 #include <cctype> // isalnum
 #include <cstdlib> // atoi
 #include "tweet.h"
+#include "util.h"
 
 /* Read the tab-seperated tokens */
 bool Tweet::readTweet(const std::string& line) {
@@ -50,4 +54,52 @@ bool Tweet::readTweet(const std::string& line) {
 	}
 
 	return true;
+}
+
+
+
+/* Calculate the sentiment for every coin mentioned from the list using the sentiment lexicon given */
+void Tweet::calculateSentiments(const std::unordered_map<std::string, double>& sentimentMap, double alpha, std::vector< std::vector<std::string> >& coins) const {
+	sentimentVector.clear();
+	sentimentVector.resize(coins.size());
+	std::fill(sentimentVector.begin(), sentimentVector.end(), std::numeric_limits<double>::infinity());
+
+	double totalScore = 0.0;
+	bool foundWord = false; // At least one word found in sentiment lexicon
+	std::vector<unsigned int> foundCoinsIndices(coins.size()); // Indices of the coins that are mentioned in the tweet
+
+	// Get tweet total score
+	for (unsigned int i = 0; i < tokens.size(); i++) {
+		// Convert token to lower case
+		std::string tokenLower = toLower(tokens[i]);
+
+		// Check if the token is a coin mention
+		bool coinFound = false;
+		for (unsigned int coinIndex = 0; coinIndex < coins.size() && !coinFound; coinIndex++) {
+			for (unsigned int j = 0; j < coins[coinIndex].size(); j++) {
+				if (tokenLower.compare(coins[coinIndex][j]) == 0) {
+					foundCoindIndices.push_back(coinIndex);
+					coinFound = true;
+					break;
+				}
+			}
+		}
+
+		// Check if the token exists in the sentiment lexicon
+		if (sentimentMap.find(tokenLower) != sentimentMap.end()) {
+			foundWord = true;
+			totalScore += sentimentMap.at(tokenLower);
+		}
+	}
+
+	if (foundWord) {
+		// Normalize total score
+		totalScore = totalScore / sqrt(totalScore * totalScore + alpha);
+
+		// Set the sentiment for the coins mentioned in the tweet
+		for (unsigned int i = 0; i < foundCoinsIndices.size(); i++) {
+			unsigned int coinIndex = foundCoinIndices[i];
+			sentimentVector[coinIndex] = totalScore;
+		}
+	}
 }

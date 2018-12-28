@@ -3,12 +3,14 @@
 
 #include <vector>
 #include <string>
+#include <unordered_map>
 
 class Tweet {
 private:
 	unsigned int tweetID;
 	unsigned int userID;
 	std::vector<std::string> tokens;
+	std::vector<double> sentiment;
 public:
 	Tweet() : tweetID(0), userID(0) {}
 
@@ -19,7 +21,7 @@ public:
 	unsigned int getSize() const { return tokens.size(); }
 	std::vector<std::string> getTokens() const { return tokens; }
 
-	//calculateSentiment() const;
+	void calculateSentiments(const std::unordered_map<std::string, double>&, double alpha) const;
 };
 
 #endif // TWEET_H

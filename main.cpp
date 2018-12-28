@@ -1,10 +1,15 @@
 #include <iostream>
 #include <vector>
+#include <unordered_map>
 #include <cstring> // strcmp, strncpy
 #include <climits> // PATH_MAX
-#include "data_point.h"
+#include "tweet.h"
 #include "file_io.h"
 #include "util.h"
+
+#define SENTIMENT_LEXICON "datasets/vader_lexicon.csv"
+#define COINS_FILE        "datasets/coins_queries.csv"
+#define ALPHA 15
 
 using namespace std;
 
@@ -55,20 +60,46 @@ int main(int argc, char *argv[]) {
 	}
 
 
-	// Vector of input data points
-	vector<DataPoint> dataPoints;
+	// Vector tweets
+	vector<Tweet> tweets;
 
 	// Read input file
 	int neighbors = 20;
 	int res;
-	if ((res = readInputFile(inputFile, dataPoints, neighbors)) == 0) {
+	if ((res = readInputFile(inputFile, tweets, neighbors)) == IO_GENERAL_ERROR) {
 		cerr << "[-] Error while reading input file: " << inputFile << endl;
 		return -1;
-	} else if (res < 0) {
+	} else if (res == IO_NOT_UNIQUE) {
 		cerr << "[-] Input file tweet IDs are not unique" << endl;
 		return -1;
+	} else if (res == IO_NOT_INCREASING) {
+		cerr << "[-] Input file tweet or user IDs are not in increasing order" << endl;
+		return -1;
 	}
-	cout << "[+] Successfully read " << dataPoints.size() << " lines\n" << endl;
+	cout << "[+] Successfully read " << tweets.size() << " lines\n" << endl;
+
+
+	// Create sentiment lexicon (map words to sentiment value)
+	// using the vader lexicon
+	std::unordered_map<std::string, double> sentimentMap;
+	if (readSentimentLexicon(SENTIMENT_LEXICON, sentimentMap) == false) {
+		return -1;
+	}
+
+	// Read the file with the coins and their alternative names
+	std::vector< std::vector<std::string> > coins;
+	if (readCoins(COINS_FILE, coins) == false) {
+		return -1;
+	}
+
+	// Calculate the sentiment for every cryptocoin for every tweet
+	for (unsigned int i = 0; i < tweets.size(); i++) {
+		tweets[i].calculateSentiment(sentimentMap, ALPHA, coins);
+	}
+
+
+	// Create recommendation systems
+	CosineLSHRecommendation rec(tweets);
 
 
 	// Remove previous contents of the output file
