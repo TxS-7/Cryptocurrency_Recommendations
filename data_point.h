@@ -21,6 +21,8 @@ public:
 	DataPoint(const DataPoint&);
 	// Assignment operator
 	DataPoint& operator=(const DataPoint&);
+	// Access to a vector position
+	double at(unsigned int index) const { return x[index]; }
 
 	bool readDataPoint(const std::string&);
 	std::vector<double> getVector() const { return x; }

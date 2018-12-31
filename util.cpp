@@ -1,4 +1,3 @@
-#include <iostream>
 #include <fstream>
 #include <limits> // numeric_limits<streamsize>::max()
 #include <cctype> // tolower
@@ -83,4 +82,9 @@ std::string toLower(const std::string& str) {
 		lower += tolower(str[i]);
 	}
 	return lower;
+}
+
+
+unsigned int min(unsigned int a, unsigned int b) {
+	return (a < b) ? a : b;
 }

@@ -8,7 +8,7 @@
 #include "metrics.h"
 
 
-KmeansClustering::KMeansClustering(std::vector<DataPoint>& inputPoints, int numClusters, int metric)
+KMeansClustering::KMeansClustering(std::vector<DataPoint>& inputPoints, int numClusters, int metric)
 		: numberOfClusters(numClusters), clusters(numClusters) {
 	// Invalid arguments
 	if (numClusters <= 1 || (unsigned int) numClusters >= inputPoints.size()) {
@@ -24,7 +24,6 @@ KmeansClustering::KMeansClustering(std::vector<DataPoint>& inputPoints, int numC
 
 	for (unsigned int i = 0; i < inputPoints.size(); i++) {
 		if (inputPoints[i].getID() == "dummy") {
-			constructorError = true;
 			std::cerr << "Point ID: dummy is not allowed" << std::endl;
 			exit(-1);
 		}
@@ -168,10 +167,6 @@ void KMeansClustering::resetClusters() {
 
 
 double KMeansClustering::silhouette(std::vector<double>& clusterSilhouette) const {
-	if (constructorError) {
-		return -1.0;
-	}
-
 	clusterSilhouette.clear();
 	for (unsigned int i = 0; i < clusters.size(); i++) {
 		clusterSilhouette.push_back(0.0);

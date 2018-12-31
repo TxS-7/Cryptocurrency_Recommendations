@@ -4,6 +4,7 @@
 #include <cstring> // strcmp, strncpy
 #include <climits> // PATH_MAX
 #include "tweet.h"
+#include "cosine_lsh_recommendation.h"
 #include "file_io.h"
 #include "util.h"
 
@@ -64,7 +65,7 @@ int main(int argc, char *argv[]) {
 	vector<Tweet> tweets;
 
 	// Read input file
-	int neighbors = 20;
+	unsigned int neighbors = 20;
 	int res;
 	if ((res = readInputFile(inputFile, tweets, neighbors)) == IO_GENERAL_ERROR) {
 		cerr << "[-] Error while reading input file: " << inputFile << endl;
@@ -76,31 +77,33 @@ int main(int argc, char *argv[]) {
 		cerr << "[-] Input file tweet or user IDs are not in increasing order" << endl;
 		return -1;
 	}
-	cout << "[+] Successfully read " << tweets.size() << " lines\n" << endl;
+	cout << "[+] Successfully read " << tweets.size() << " lines" << endl;
+	cout << "[+] P = " << neighbors << "\n" << endl;
 
 
 	// Create sentiment lexicon (map words to sentiment value)
 	// using the vader lexicon
 	std::unordered_map<std::string, double> sentimentMap;
 	if (readSentimentLexicon(SENTIMENT_LEXICON, sentimentMap) == false) {
+		cerr << "[-] Error while reading sentiment lexicon: " << SENTIMENT_LEXICON << endl;
 		return -1;
 	}
 
 	// Read the file with the coins and their alternative names
 	std::vector< std::vector<std::string> > coins;
 	if (readCoins(COINS_FILE, coins) == false) {
+		cerr << "[-] Error while reading coin list: " << COINS_FILE << endl;
 		return -1;
 	}
 
 	// Calculate the sentiment for every cryptocoin for every tweet
 	for (unsigned int i = 0; i < tweets.size(); i++) {
-		tweets[i].calculateSentiment(sentimentMap, ALPHA, coins);
+		tweets[i].calculateSentiments(sentimentMap, ALPHA, coins);
 	}
 
 
 	// Create recommendation systems
-	CosineLSHRecommendation rec(tweets);
-
+	CosineLSHRecommendation rec(tweets, neighbors);
 
 	// Remove previous contents of the output file
 	if (emptyFile(outputFile) == false) {
@@ -109,6 +112,18 @@ int main(int argc, char *argv[]) {
 	}
 
 
+	// Get the recommendations
+	std::vector< std::vector<unsigned int> > userCoins = rec.recommendations();
+	cout << userCoins.size() << endl;
+	for (unsigned int i = 0; i < userCoins.size(); i++) {
+		cout << "User: " << i << " -> ";
+		for (unsigned int j = 0; j < userCoins[i].size(); j++) {
+			unsigned int coinIndex = userCoins[i][j];
+			cout << coins[coinIndex][0] << " ";
+		}
+		cout << "\n" << endl;
+	}
+	cout << endl;
 	//createResults();
 
 

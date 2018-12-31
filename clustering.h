@@ -37,13 +37,11 @@ public:
 	std::vector<DataPoint *> getCentroids() const { return centroids; }
 
 	~KMeansClustering() {
-		if (!constructorError) {
-			for (unsigned int i = 0; i < centroids.size(); i++) {
-				// Delete centroids that don't match any of the dataset points
-				// (Noted using ID "dummy")
-				if (centroids[i]->getID() == "dummy") {
-					delete centroids[i];
-				}
+		for (unsigned int i = 0; i < centroids.size(); i++) {
+			// Delete centroids that don't match any of the dataset points
+			// (Noted using ID "dummy")
+			if (centroids[i]->getID() == "dummy") {
+				delete centroids[i];
 			}
 		}
 	}

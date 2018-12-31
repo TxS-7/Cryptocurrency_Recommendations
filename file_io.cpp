@@ -1,5 +1,5 @@
+#include <iostream>
 #include <fstream>
-#include <iomanip> // setprecision
 #include <sstream>
 #include <string>
 #include <vector>
@@ -24,13 +24,11 @@ int readInputFile(const char *filename, std::vector<Tweet>& tweets, unsigned int
 	// Set of tweet IDs to check if they are unique
 	std::set<unsigned int> tweetIDs;
 	// Used to check if IDs are in increasing order
-	int prevUserID = -1;
-	int prevTweetID = -1;
+	unsigned int prevUserID = 0;
+	unsigned int prevTweetID = 0;
 
 
-	unsigned int dimensions = 0;
 	std::string line;
-
 	// Skip lines that are empty or contain only whitespaces
 	do {
 		if (!getline(inputFile, line)) {
@@ -65,6 +63,7 @@ int readInputFile(const char *filename, std::vector<Tweet>& tweets, unsigned int
 		tweetIDs.insert(tweetID);
 
 		prevTweetID = tweetID;
+		prevUserID = userID;
 		tweets.push_back(tweet);
 	}
 
@@ -82,20 +81,25 @@ int readInputFile(const char *filename, std::vector<Tweet>& tweets, unsigned int
 		}
 
 		// Check if tweet ID already exists
+		unsigned int userID = tweet.getUser();
 		unsigned int tweetID = tweet.getID();
-		if (tweetIdDs.insert(tweetID).second == false) {
+		if (tweetIDs.insert(tweetID).second == false) {
 			return IO_NOT_UNIQUE;
 		}
 
-		// Check if tweet ID and user ID are in increasing order
-		if (tweetID <= prevTweetID) {
-			return IO_NOT_INCREASING;
+		// Check if user ID and tweet ID are in increasing order
+		if (tweets.size() > 0) { // Exclude first tweet
+			if (userID < prevUserID) { // Invalid user ID
+				return IO_NOT_INCREASING;
+			} else if (userID == prevUserID) { // Same user: check tweet ID
+				if (tweetID <= prevTweetID) { // Invalid tweet ID
+					return IO_NOT_INCREASING;
+				}
+			}
 		}
+
+		prevUserID = userID;
 		prevTweetID = tweetID;
-		unsigned int userID = tweet.getUser();
-		if (userID < prevUserID) {
-			return IO_NOT_INCREASING;
-		}
 
 		tweets.push_back(tweet);
 	}
@@ -120,6 +124,11 @@ bool readSentimentLexicon(const char *filename, std::unordered_map<std::string, 
 		// Skip lines that are empty or contain only whitespaces
 		if (line == "" || std::all_of(line.begin(), line.end(), isspace)) {
 			continue;
+		}
+
+		if (line.find('\r') != std::string::npos) {
+			std::cerr << "[-] Windows format found" << std::endl;
+			return false;
 		}
 
 		// Convert line to stringstream
@@ -161,6 +170,11 @@ bool readCoins(const char *filename, std::vector< std::vector<std::string> >& co
 		// Skip lines that are empty or contain only whitespaces
 		if (line == "" || std::all_of(line.begin(), line.end(), isspace)) {
 			continue;
+		}
+
+		if (line.find('\r') != std::string::npos) {
+			std::cerr << "[-] Windows format found" << std::endl;
+			return false;
 		}
 
 		std::vector<std::string> coinWords;
