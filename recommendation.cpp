@@ -1,13 +1,16 @@
+#include <iostream>
 #include <fstream>
 #include <vector>
 #include <set>
+#include <unordered_map>
 #include <algorithm> // std::fill
 #include "recommendation.h"
 #include "tweet.h"
 #include "clustering.h"
 #include "data_point.h"
+#include "metrics.h"
 
-const char *Recommendation::PROCESSES_TWEETS_FILENAME = "datasets/twitter_dataset_small_v2.csv";
+const char *Recommendation::PROCESSED_TWEETS_FILENAME = "datasets/twitter_dataset_small_v2.csv";
 
 Recommendation::Recommendation(const std::vector<Tweet>& tweets) {
 	createUserSentiments(tweets);
@@ -17,7 +20,7 @@ Recommendation::Recommendation(const std::vector<Tweet>& tweets) {
 
 
 /* Create a total sentiment for every user based on his tweets */
-void createUserSentiments(const std::vector<Tweet>& tweets) {
+void Recommendation::createUserSentiments(const std::vector<Tweet>& tweets) {
 	// Create a vector for every user as the sum of the sentiments of each one of his/her tweets
 	std::vector<double> userSentiment(tweets[0].getSentiment().size());
 	std::fill(userSentiment.begin(), userSentiment.end(), Tweet::SENTIMENT_NOT_SET);
@@ -74,68 +77,78 @@ void createUserSentiments(const std::vector<Tweet>& tweets) {
 
 /* Place all processed tweets into clusters using K-means and create a total
  * sentiment for each cluster */
-void createClusterSentiments(const std::vector<Tweet>& tweets) {
+void Recommendation::createClusterSentiments(const std::vector<Tweet>& tweets) {
+	// Map tweet IDs to index to find them faster when we know their ID
+	std::unordered_map<std::string, unsigned int> IDToIndex;
+	// Set of tweet IDs used to check if the processed tweet IDs match the given tweets
+	std::set<std::string> existingIDs;
+	for (unsigned int i = 0; i < tweets.size(); i++) {
+		std::string strID = std::to_string(tweets[i].getID());
+		IDToIndex[strID] = i;
+		existingIDs.insert(strID);
+	}
+
+
+	// Get the processed tweets
+	std::vector<DataPoint> processedTweets;
+	if (readProcessedTweets(PROCESSED_TWEETS_FILENAME, processedTweets, existingIDs) == false) {
+		std::cerr << "[-] Error while reading processed tweets file: " << PROCESSED_TWEETS_FILENAME << std::endl;
+		exit(-1);
+	}
+
+	// Perform clustering of the tweets using K-means
+	kMeans = new KMeansClustering(processedTweets, NUMBER_OF_CLUSTERS, Metrics::COSINE);
+	kMeans->run();
+
+	// Get the point IDs of each cluster
+	std::vector< std::vector<std::string> > clusters;
+	kMeans->getPointsPerCluster(clusters);
+
+
 	// Create a vector for every cluster as the sum of the sentiments of its tweets
 	std::vector<double> clusterSentiment(tweets[0].getSentiment().size());
-	std::fill(clusterSentiment.begin(), clusterSentiment.end(), Tweet::SENTIMENT_NOT_SET);
+	// Create total sentiment for every cluster
+	for (unsigned int i = 0; i < clusters.size(); i++) { // Each cluster
+		std::fill(clusterSentiment.begin(), clusterSentiment.end(), Tweet::SENTIMENT_NOT_SET);
+		for (unsigned int j = 0; j < clusters[i].size(); j++) { // Each point in cluster
+			unsigned int tweetIndex = IDToIndex[clusters[i][j]];
+			std::vector<double> sentiment = tweets[tweetIndex].getSentiment();
 
-	// NOTE: User IDs must be grouped
-	unsigned int currUser = tweets[0].getUser();
-	for (unsigned int i = 0; i < tweets.size(); i++) {
-		std::vector<double> sentiment = tweets[i].getSentiment();
-		if (tweets[i].getUser() == currUser) {
-			for (unsigned int j = 0; j < sentiment.size(); j++) {
-				if (sentiment[j] != Tweet::SENTIMENT_NOT_SET) {
-					if (userSentiment[j] != Tweet::SENTIMENT_NOT_SET) {
-						userSentiment[j] += sentiment[j];
+			for (unsigned int k = 0; j < sentiment.size(); k++) { // Each coin sentiment
+				if (sentiment[k] != Tweet::SENTIMENT_NOT_SET) {
+					if (clusterSentiment[k] != Tweet::SENTIMENT_NOT_SET) {
+						clusterSentiment[k] += sentiment[k];
 					} else {
-						userSentiment[j] = sentiment[j];
+						clusterSentiment[k] = sentiment[k];
 					}
 				}
 			}
-		} else { // New user: save current user sentiment and reset it
-			// Calculate average sentiment of the user
-			double sum = 0.0;
-			for (unsigned int j = 0; j < userSentiment.size(); j++) {
-				if (userSentiment[j] != Tweet::SENTIMENT_NOT_SET) {
-					sum += userSentiment[j];
-				}
-			}
-			usersAverageSentiment.push_back(sum / userSentiment.size());
+		}
 
-			DataPoint userPoint(userSentiment, std::to_string(currUser));
-			userSentiments.push_back(userPoint);
-			currUser = tweets[i].getUser();
-
-			for (unsigned int j = 0; j < sentiment.size(); j++) {
-				userSentiment[j] = sentiment[j];
+		// Calculate average sentiment of the cluster
+		double sum = 0.0;
+		for (unsigned int k = 0; k < clusterSentiment.size(); k++) {
+			if (clusterSentiment[k] != Tweet::SENTIMENT_NOT_SET) {
+				sum += clusterSentiment[k];
 			}
 		}
-	}
+		clustersAverageSentiment.push_back(sum / clusterSentiment.size());
 
-	// Save last user's total sentiment
-	// Calculate average sentiment of the user
-	double sum = 0.0;
-	for (unsigned int j = 0; j < userSentiment.size(); j++) {
-		if (userSentiment[j] != Tweet::SENTIMENT_NOT_SET) {
-			sum += userSentiment[j];
-		}
+		// Convert total cluster sentiment vector to DataPoint and store it
+		DataPoint clusterPoint(clusterSentiment, std::to_string(i+1));
+		clusterSentiments.push_back(clusterPoint);
 	}
-	usersAverageSentiment.push_back(sum / userSentiment.size());
-
-	DataPoint userPoint(userSentiment, std::to_string(tweets[tweets.size()-1].getUser()));
-	userSentiments.push_back(userPoint);
 }
 
 
 
 /* Read the tweets after they have passed through TF-IDF vectorization and SVD */
-bool Recommendation::readProcessedTweets(const char *filename, std::vector<DataPoint>& points) const {
+bool Recommendation::readProcessedTweets(const char *filename, std::vector<DataPoint>& points, std::set<std::string>& existingIDs) const {
 	// Open file for reading
 	std::ifstream inputFile;
 	inputFile.open(filename);
 	if (!inputFile) {
-		return 0;
+		return false;
 	}
 
 	// Set of IDs to check if they are unique
@@ -153,12 +166,17 @@ bool Recommendation::readProcessedTweets(const char *filename, std::vector<DataP
 
 		DataPoint point;
 		if (point.readDataPoint(line) == false) {
-			return 0;
+			return false;
 		}
 
 		// Check if ID already exists
 		if (ids.insert(point.getID()).second == false) {
-			return -1;
+			return false;
+		}
+
+		// Check if the ID already exists in the non-processed tweets
+		if (existingIDs.insert(point.getID()).second != false) {
+			return false;
 		}
 
 		points.push_back(point);
@@ -166,12 +184,12 @@ bool Recommendation::readProcessedTweets(const char *filename, std::vector<DataP
 			dimensions = point.getDimensions();
 		} else { // Dimensions of different points don't match
 			if (point.getDimensions() != dimensions) {
-				return 0;
+				return false;
 			}
 		}
 		i++;
 	}
 
 	inputFile.close();
-	return i;
+	return true;
 }

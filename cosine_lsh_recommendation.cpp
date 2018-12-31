@@ -4,6 +4,7 @@
 #include <cmath> // std::abs
 #include "cosine_lsh_recommendation.h"
 #include "tweet.h"
+#include "LSH/LSH.h"
 #include "data_point.h"
 #include "metrics.h"
 #include "util.h"

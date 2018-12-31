@@ -17,7 +17,7 @@ main.o: main.cpp tweet.h cosine_lsh_recommendation.h file_io.h util.h
 cosine_lsh_recommendation.o: cosine_lsh_recommendation.cpp cosine_lsh_recommendation.h recommendation.h tweet.h $(LSH_DIR)/LSH.h data_point.h metrics.h util.h
 	$(CC) $(FLAGS) -c cosine_lsh_recommendation.cpp
 
-recommendation.o: recommendation.cpp recommendation.h tweet.h clustering.h data_point.h
+recommendation.o: recommendation.cpp recommendation.h tweet.h clustering.h data_point.h metrics.h
 	$(CC) $(FLAGS) -c recommendation.cpp
 
 
