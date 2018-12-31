@@ -114,7 +114,7 @@ void Recommendation::createClusterSentiments(const std::vector<Tweet>& tweets) {
 			unsigned int tweetIndex = IDToIndex[clusters[i][j]];
 			std::vector<double> sentiment = tweets[tweetIndex].getSentiment();
 
-			for (unsigned int k = 0; j < sentiment.size(); k++) { // Each coin sentiment
+			for (unsigned int k = 0; k < sentiment.size(); k++) { // Each coin sentiment
 				if (sentiment[k] != Tweet::SENTIMENT_NOT_SET) {
 					if (clusterSentiment[k] != Tweet::SENTIMENT_NOT_SET) {
 						clusterSentiment[k] += sentiment[k];
@@ -192,4 +192,26 @@ bool Recommendation::readProcessedTweets(const char *filename, std::vector<DataP
 
 	inputFile.close();
 	return true;
+}
+
+
+
+/* Combine user based and cluster based recommendations */
+std::vector< std::vector<unsigned int> > Recommendation::recommendations() const {
+	std::vector< std::vector<unsigned int> > result = userBasedRecommendations();
+	std::vector< std::vector<unsigned int> > result2 = clusterBasedRecommendations();
+
+	for (unsigned int i = 0; i < result.size(); i++) {
+		// Used to avoid duplicate coins from user/cluster based recommendations
+		std::set<unsigned int> foundCoins;
+		for (unsigned int j = 0; j < result[i].size(); j++) {
+			foundCoins.insert(result[i][j]);
+		}
+		for (unsigned int j = 0; j < result2[i].size(); j++) {
+			if (foundCoins.insert(result2[i][j]).second != false) {
+				result[i].push_back(result2[i][j]);
+			}
+		}
+	}
+	return result;
 }

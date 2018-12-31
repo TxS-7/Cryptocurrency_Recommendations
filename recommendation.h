@@ -23,10 +23,13 @@ private:
 	void createUserSentiments(const std::vector<Tweet>&);
 	void createClusterSentiments(const std::vector<Tweet>&);
 	bool readProcessedTweets(const char *, std::vector<DataPoint>&, std::set<std::string>&) const;
+
+	virtual std::vector< std::vector<unsigned int> > userBasedRecommendations() const = 0;
+	virtual std::vector< std::vector<unsigned int> > clusterBasedRecommendations() const = 0;
 public:
 	Recommendation(const std::vector<Tweet>&);
 
-	virtual std::vector< std::vector<unsigned int> > recommendations() const = 0;
+	std::vector< std::vector<unsigned int> > recommendations() const;
 
 	virtual ~Recommendation() {
 		if (kMeans != NULL) {

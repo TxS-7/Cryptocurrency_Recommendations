@@ -9,16 +9,20 @@
 class CosineLSHRecommendation : public Recommendation {
 private:
 	unsigned int numberOfNeighbors;
+	LSH *userLSH;
+	LSH *clusterLSH;
 
-	LSH *lsh;
+	std::vector< std::vector<unsigned int> > userBasedRecommendations() const;
+	std::vector< std::vector<unsigned int> > clusterBasedRecommendations() const;
 public:
 	CosineLSHRecommendation(const std::vector<Tweet>&, unsigned int, int kLSH = 4, int L = 5);
 
-	std::vector< std::vector<unsigned int> > recommendations() const;
-
 	~CosineLSHRecommendation() {
-		if (lsh != NULL) {
-			delete lsh;
+		if (userLSH != NULL) {
+			delete userLSH;
+		}
+		if (clusterLSH != NULL) {
+			delete clusterLSH;
 		}
 	}
 };
