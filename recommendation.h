@@ -13,6 +13,7 @@ protected:
 	std::vector<DataPoint> userSentiments;
 	std::vector<double> usersAverageSentiment;
 
+	std::vector<DataPoint> processedTweets;
 	std::vector<DataPoint> clusterSentiments;
 	std::vector<double> clustersAverageSentiment;
 private:

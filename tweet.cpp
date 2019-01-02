@@ -2,6 +2,7 @@
 #include <string>
 #include <sstream>
 #include <unordered_map>
+#include <set>
 #include <limits> // std::numeric_limits
 #include <algorithm> // std::fill
 #include <cctype> // isalnum
@@ -68,7 +69,7 @@ void Tweet::calculateSentiments(const std::unordered_map<std::string, double>& s
 
 	double totalScore = 0.0;
 	bool foundWord = false; // At least one word found in sentiment lexicon
-	std::vector<unsigned int> foundCoinsIndices(coins.size()); // Indices of the coins that are mentioned in the tweet
+	std::set<unsigned int> foundCoinsIndices; // Indices of the coins that are mentioned in the tweet
 
 	// Get tweet total score
 	for (unsigned int i = 0; i < tokens.size(); i++) {
@@ -80,7 +81,7 @@ void Tweet::calculateSentiments(const std::unordered_map<std::string, double>& s
 		for (unsigned int coinIndex = 0; coinIndex < coins.size() && !coinFound; coinIndex++) {
 			for (unsigned int j = 0; j < coins[coinIndex].size(); j++) {
 				if (tokenLower.compare(coins[coinIndex][j]) == 0) {
-					foundCoinsIndices.push_back(coinIndex);
+					foundCoinsIndices.insert(coinIndex);
 					coinFound = true;
 					break;
 				}
@@ -99,8 +100,7 @@ void Tweet::calculateSentiments(const std::unordered_map<std::string, double>& s
 		totalScore = totalScore / sqrt(totalScore * totalScore + alpha);
 
 		// Set the sentiment for the coins mentioned in the tweet
-		for (unsigned int i = 0; i < foundCoinsIndices.size(); i++) {
-			unsigned int coinIndex = foundCoinsIndices[i];
+		for (auto coinIndex : foundCoinsIndices) {
 			sentimentVector[coinIndex] = totalScore;
 		}
 	}

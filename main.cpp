@@ -103,7 +103,7 @@ int main(int argc, char *argv[]) {
 
 
 	// Create recommendation systems
-	CosineLSHRecommendation rec(tweets, neighbors);
+	CosineLSHRecommendation *rec = new CosineLSHRecommendation(tweets, neighbors);
 
 	// Remove previous contents of the output file
 	if (emptyFile(outputFile) == false) {
@@ -113,7 +113,7 @@ int main(int argc, char *argv[]) {
 
 
 	// Get the recommendations
-	std::vector< std::vector<unsigned int> > userCoins = rec.recommendations();
+	std::vector< std::vector<unsigned int> > userCoins = rec->recommendations();
 	cout << userCoins.size() << endl;
 	for (unsigned int i = 0; i < userCoins.size(); i++) {
 		cout << "User: " << i << " -> ";
@@ -128,6 +128,7 @@ int main(int argc, char *argv[]) {
 
 
 	cout << "[!] Exiting the program..." << endl;
+	delete rec;
 	return 0;
 }
 

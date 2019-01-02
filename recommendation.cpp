@@ -13,7 +13,9 @@
 const char *Recommendation::PROCESSED_TWEETS_FILENAME = "datasets/twitter_dataset_small_v2.csv";
 
 Recommendation::Recommendation(const std::vector<Tweet>& tweets) {
+	std::cout << "[*] Creating sentiment scores based on users" << std::endl;
 	createUserSentiments(tweets);
+	std::cout << "[*] Creating sentiment scores based on clusters" << std::endl;
 	createClusterSentiments(tweets);
 }
 
@@ -90,7 +92,6 @@ void Recommendation::createClusterSentiments(const std::vector<Tweet>& tweets) {
 
 
 	// Get the processed tweets
-	std::vector<DataPoint> processedTweets;
 	if (readProcessedTweets(PROCESSED_TWEETS_FILENAME, processedTweets, existingIDs) == false) {
 		std::cerr << "[-] Error while reading processed tweets file: " << PROCESSED_TWEETS_FILENAME << std::endl;
 		exit(-1);
@@ -198,7 +199,9 @@ bool Recommendation::readProcessedTweets(const char *filename, std::vector<DataP
 
 /* Combine user based and cluster based recommendations */
 std::vector< std::vector<unsigned int> > Recommendation::recommendations() const {
+	std::cout << "\nCreating recommendations based on users" << std::endl;
 	std::vector< std::vector<unsigned int> > result = userBasedRecommendations();
+	std::cout << "Creating recommendations based on clusters" << std::endl;
 	std::vector< std::vector<unsigned int> > result2 = clusterBasedRecommendations();
 
 	for (unsigned int i = 0; i < result.size(); i++) {
