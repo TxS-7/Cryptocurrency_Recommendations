@@ -1,5 +1,5 @@
 #include <vector>
-#include <algorithm> // std::sort, std::min
+#include <algorithm> // std::sort
 #include <utility> // std::pair, std::make_pair
 #include <cmath> // std::abs
 #include "cosine_lsh_recommendation.h"
@@ -31,18 +31,17 @@ std::vector< std::vector<unsigned int> > CosineLSHRecommendation::userBasedRecom
 	std::vector< std::vector<unsigned int> > results;
 
 	// Get the P neighbors from the LSH for every user
+	//for (unsigned int i = 0; i < userSentiments.size(); i++) {
 	for (unsigned int i = 0; i < userSentiments.size(); i++) {
 		std::vector<DataPoint *> neighbors;
 		std::vector<double> distances;
-		userLSH->findAllNeighbors(userSentiments[i], 0.0, neighbors, distances);
+		userLSH->findAllNeighbors(userSentiments[i], neighbors, distances);
 
 		// Sort the neighbors by distance and keep the top P neighbors excluding the user himself
 		std::vector< std::pair<double, unsigned int> > distancesAndIndices;
 		// Create the vector of distances and indices used to find the indices of the closest neighbors
 		for (unsigned int j = 0; j < distances.size(); j++) {
-			if (distances[j] > 0) {
-				distancesAndIndices.push_back(std::make_pair(distances[j], j));
-			}
+			distancesAndIndices.push_back(std::make_pair(distances[j], j));
 		}
 
 		std::sort(distancesAndIndices.begin(), distancesAndIndices.end());
@@ -60,7 +59,7 @@ std::vector< std::vector<unsigned int> > CosineLSHRecommendation::userBasedRecom
 		// and keep the best 5
 		std::vector< std::pair<double, unsigned int> > newCoins;
 		for (unsigned int j = 0; j < userSentiments[i].getDimensions(); j++) {
-			if (userSentiments[i].at(j) == Tweet::SENTIMENT_NOT_SET) {
+			if (userSentiments[i].at(j) == usersAverageSentiment[i]) {
 				double predictedSentiment = usersAverageSentiment[i];
 
 				// Calculate normalizing factor z
@@ -78,12 +77,12 @@ std::vector< std::vector<unsigned int> > CosineLSHRecommendation::userBasedRecom
 
 		// Sort in descending order using lambda
 		std::sort(newCoins.begin(), newCoins.end(), [](const std::pair<double, unsigned int>& left, const std::pair<double, unsigned int>& right) {
-			return left.first > right.second;
+			return left.first > right.first;
 		});
 
 		// Get the top 5 coins based on sentiment
 		std::vector<unsigned int> recommendedCoins;
-		for (unsigned int j = 0; j < 5; j++) {
+		for (unsigned int j = 0; j < min(5, newCoins.size()); j++) {
 			recommendedCoins.push_back(newCoins[j].second);
 		}
 		results.push_back(recommendedCoins);
@@ -103,7 +102,7 @@ std::vector< std::vector<unsigned int> > CosineLSHRecommendation::clusterBasedRe
 	for (unsigned int i = 0; i < userSentiments.size(); i++) {
 		std::vector<DataPoint *> neighbors;
 		std::vector<double> distances;
-		clusterLSH->findAllNeighbors(userSentiments[i], 0.0, neighbors, distances);
+		clusterLSH->findAllNeighbors(userSentiments[i], neighbors, distances);
 
 		// Sort the neighbors by distance and keep the top P neighbors
 		std::vector< std::pair<double, unsigned int> > distancesAndIndices;
@@ -127,7 +126,7 @@ std::vector< std::vector<unsigned int> > CosineLSHRecommendation::clusterBasedRe
 		// and keep the best 5
 		std::vector< std::pair<double, unsigned int> > newCoins;
 		for (unsigned int j = 0; j < userSentiments[i].getDimensions(); j++) {
-			if (userSentiments[i].at(j) == Tweet::SENTIMENT_NOT_SET) {
+			if (userSentiments[i].at(j) == usersAverageSentiment[i]) {
 				double predictedSentiment = usersAverageSentiment[i];
 
 				// Calculate normalizing factor z
@@ -150,7 +149,7 @@ std::vector< std::vector<unsigned int> > CosineLSHRecommendation::clusterBasedRe
 
 		// Get the top 5 coins based on sentiment
 		std::vector<unsigned int> recommendedCoins;
-		for (unsigned int j = 0; j < 2; j++) {
+		for (unsigned int j = 0; j < min(2, newCoins.size()); j++) {
 			recommendedCoins.push_back(newCoins[j].second);
 		}
 		results.push_back(recommendedCoins);

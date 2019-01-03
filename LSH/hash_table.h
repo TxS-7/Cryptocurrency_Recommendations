@@ -28,7 +28,7 @@ public:
 	HashTable(int k2, int d, DIST_PTR metric) : k(k2), dimensions(d), dist(metric) {}
 
 	void insert(DataPoint&);
-	int findNeighbors(const DataPoint&, double, std::vector<DataPoint *>&, std::vector<double>&) const;
+	int findNeighbors(const DataPoint&, std::vector<DataPoint *>&, std::vector<double>&) const;
 	double findNearest(const DataPoint&, DataPoint&) const;
 
 	virtual unsigned long long getSize() const;

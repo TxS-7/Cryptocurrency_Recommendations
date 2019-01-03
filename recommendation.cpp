@@ -44,17 +44,30 @@ void Recommendation::createUserSentiments(const std::vector<Tweet>& tweets) {
 		} else { // New user: save current user sentiment and reset it
 			// Calculate average sentiment of the user
 			double sum = 0.0;
+			bool foundSentiment = false;
 			for (unsigned int j = 0; j < userSentiment.size(); j++) {
 				if (userSentiment[j] != Tweet::SENTIMENT_NOT_SET) {
+					foundSentiment = true;
 					sum += userSentiment[j];
 				}
 			}
-			usersAverageSentiment.push_back(sum / userSentiment.size());
 
-			DataPoint userPoint(userSentiment, std::to_string(currUser));
-			userSentiments.push_back(userPoint);
+			if (foundSentiment) { // Keep only users with at least one sentiments for a coin
+				usersAverageSentiment.push_back(sum / userSentiment.size());
+
+				// Set the coins without sentiment to be equal to the average
+				// so that after the normalization they become 0
+				for (unsigned int j = 0; j < userSentiment.size(); j++) {
+					if (userSentiment[j] == Tweet::SENTIMENT_NOT_SET) {
+						userSentiment[j] = sum / userSentiment.size();
+					}
+				}
+
+				DataPoint userPoint(userSentiment, std::to_string(currUser));
+				userSentiments.push_back(userPoint);
+			}
+
 			currUser = tweets[i].getUser();
-
 			for (unsigned int j = 0; j < sentiment.size(); j++) {
 				userSentiment[j] = sentiment[j];
 			}
@@ -128,16 +141,29 @@ void Recommendation::createClusterSentiments(const std::vector<Tweet>& tweets) {
 
 		// Calculate average sentiment of the cluster
 		double sum = 0.0;
+		bool foundSentiment = false;
 		for (unsigned int k = 0; k < clusterSentiment.size(); k++) {
 			if (clusterSentiment[k] != Tweet::SENTIMENT_NOT_SET) {
+				foundSentiment = true;
 				sum += clusterSentiment[k];
 			}
 		}
-		clustersAverageSentiment.push_back(sum / clusterSentiment.size());
 
-		// Convert total cluster sentiment vector to DataPoint and store it
-		DataPoint clusterPoint(clusterSentiment, std::to_string(i+1));
-		clusterSentiments.push_back(clusterPoint);
+		if (foundSentiment) {
+			clustersAverageSentiment.push_back(sum / clusterSentiment.size());
+
+			// Set the coins without sentiment to be equal to the average
+			// so that after the normalization they become 0
+			for (unsigned int k = 0; k < clusterSentiment.size(); k++) {
+				if (clusterSentiment[k] == Tweet::SENTIMENT_NOT_SET) {
+					clusterSentiment[k] = sum / clusterSentiment.size();
+				}
+			}
+
+			// Convert total cluster sentiment vector to DataPoint and store it
+			DataPoint clusterPoint(clusterSentiment, std::to_string(i+1));
+			clusterSentiments.push_back(clusterPoint);
+		}
 	}
 }
 

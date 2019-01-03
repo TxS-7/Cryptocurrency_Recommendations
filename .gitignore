@@ -2,6 +2,7 @@ datasets/*
 aaa
 bbb
 *.o
+*.swp
 notes.txt
 a.out
 README.odt

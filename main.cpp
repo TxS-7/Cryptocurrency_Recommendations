@@ -114,7 +114,6 @@ int main(int argc, char *argv[]) {
 
 	// Get the recommendations
 	std::vector< std::vector<unsigned int> > userCoins = rec->recommendations();
-	cout << userCoins.size() << endl;
 	for (unsigned int i = 0; i < userCoins.size(); i++) {
 		cout << "User: " << i << " -> ";
 		for (unsigned int j = 0; j < userCoins[i].size(); j++) {

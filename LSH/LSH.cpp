@@ -25,19 +25,21 @@ void LSH::insert(DataPoint& p) {
 
 
 /* Find all neighbors from the L hash tables and return the index of the closest */
-int LSH::findAllNeighbors(const DataPoint& q, double radius, std::vector<DataPoint *>& results, std::vector<double>& distances) const {
+int LSH::findAllNeighbors(const DataPoint& q, std::vector<DataPoint *>& results, std::vector<double>& distances) const {
 	// Create a set of points that have been already found
 	std::set<std::string> alreadyFound;
 
 	int i;
 	double minDist = -1.0;
 	int minIndex = -1;
+	unsigned int total = 0;
 
 	// Find the neighbors of q in every hash table
 	for (i = 0; i < L; i++) {
 		std::vector<DataPoint *> neighbors;
 		std::vector<double> tempDistances;
-		int tempMinIndex = tables[i]->findNeighbors(q, radius, neighbors, tempDistances);
+		int tempMinIndex = tables[i]->findNeighbors(q, neighbors, tempDistances);
+		total += neighbors.size();
 
 		// No neighbors found
 		if (tempMinIndex < 0) {

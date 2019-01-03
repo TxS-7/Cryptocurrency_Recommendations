@@ -8,7 +8,7 @@
 #include "../util.h"
 
 CosineHashTable::CosineHashTable(int k, int dimensions)
-	: HashTable(k, dimensions, &Metrics::cosineSimilarity) {
+	: HashTable(k, dimensions, &Metrics::cosineDistance) {
 	// Initialize the seed for the random number generator
 	unsigned int seed = std::chrono::system_clock::now().time_since_epoch().count();
 	std::default_random_engine generator(seed);

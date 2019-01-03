@@ -26,7 +26,7 @@ void HashTable::insert(DataPoint& p) {
 
 
 /* Find the neighbors of the given point and return them along with the closest neigbor index */
-int HashTable::findNeighbors(const DataPoint& q, double radius, std::vector<DataPoint *>& result, std::vector<double>& distances) const {
+int HashTable::findNeighbors(const DataPoint& q, std::vector<DataPoint *>& result, std::vector<double>& distances) const {
 	// Find the bucket of the query point
 	std::vector<int> g;
 	int j;
@@ -45,7 +45,7 @@ int HashTable::findNeighbors(const DataPoint& q, double radius, std::vector<Data
 	double minDist = -1.0;
 	int minIndex = -1;
 
-	// Find every other point in the same bucket and keep the points within the given radius
+	// Find every other point in the same bucket
 	unsigned int i;
 	for (i = 0; i < neighbors.size(); i++) {
 		// Check if the points have the same g function
@@ -53,15 +53,13 @@ int HashTable::findNeighbors(const DataPoint& q, double radius, std::vector<Data
 			continue;
 		}
 
-		double tempDist = dist(q, *(neighbors.at(i)));
-		if (tempDist < radius) {
-			result.push_back(neighbors.at(i));
-			distances.push_back(tempDist);
+		double tempDist = dist(q, *(neighbors[i]));
+		result.push_back(neighbors.at(i));
+		distances.push_back(tempDist);
 
-			if (tempDist < minDist || minIndex < 0) {
-				minDist = tempDist;
-				minIndex = result.size() - 1;
-			}
+		if (tempDist < minDist || minIndex < 0) {
+			minDist = tempDist;
+			minIndex = result.size() - 1;
 		}
 	}
 

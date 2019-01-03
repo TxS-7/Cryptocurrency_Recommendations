@@ -15,7 +15,7 @@ public:
 	LSH(int, int, int, int);
 
 	void insert(DataPoint&);
-	int findAllNeighbors(const DataPoint&, double, std::vector<DataPoint *>&, std::vector<double>&) const;
+	int findAllNeighbors(const DataPoint&, std::vector<DataPoint *>&, std::vector<double>&) const;
 	double findNearestNeighbor(const DataPoint&, DataPoint&) const;
 
 	unsigned long long getSize() const;
