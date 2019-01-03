@@ -2,6 +2,8 @@
 #define CLUSTERING_H
 
 #include <vector>
+#include <string>
+#include <unordered_map>
 #include "data_point.h"
 #include "metrics.h"
 
@@ -17,6 +19,8 @@ private:
 	int numberOfClusters;
 	std::vector< std::vector<DataPoint *> > clusters;
 
+	// Map point ID with cluster index
+	std::unordered_map<std::string, int> clusterOfPoint;
 
 	void initialize();
 	void assign();
@@ -35,6 +39,7 @@ public:
 	void getNumberOfPointsPerCluster(std::vector<unsigned int>&) const;
 	void getPointsPerCluster(std::vector< std::vector< std::string> >&) const;
 	std::vector<DataPoint *> getCentroids() const { return centroids; }
+	std::vector<DataPoint *> getPointsInSameCluster(const DataPoint&) const;
 
 	~KMeansClustering() {
 		for (unsigned int i = 0; i < centroids.size(); i++) {

@@ -105,7 +105,7 @@ int main(int argc, char *argv[]) {
 
 	// Create recommendation systems
 	//CosineLSHRecommendation *rec = new CosineLSHRecommendation(tweets, neighbors);
-	ClusteringRecommendation *rec = new ClusteringRecommendation(tweets, 10);
+	ClusteringRecommendation *rec = new ClusteringRecommendation(tweets, 100);
 
 	// Remove previous contents of the output file
 	if (emptyFile(outputFile) == false) {

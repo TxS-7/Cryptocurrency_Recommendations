@@ -31,7 +31,6 @@ std::vector< std::vector<unsigned int> > CosineLSHRecommendation::userBasedRecom
 	std::vector< std::vector<unsigned int> > results;
 
 	// Get the P neighbors from the LSH for every user
-	//for (unsigned int i = 0; i < userSentiments.size(); i++) {
 	for (unsigned int i = 0; i < userSentiments.size(); i++) {
 		std::vector<DataPoint *> neighbors;
 		std::vector<double> distances;

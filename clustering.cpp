@@ -12,7 +12,7 @@ KMeansClustering::KMeansClustering(std::vector<DataPoint>& inputPoints, int numC
 		: numberOfClusters(numClusters), clusters(numClusters) {
 	// Invalid arguments
 	if (numClusters <= 1 || (unsigned int) numClusters >= inputPoints.size()) {
-		std::cerr << "Invalid constructor arguments" << std::endl;
+		std::cerr << "Invalid number of clusters: " << numClusters << ". Number of points: " << inputPoints.size() << std::endl;
 		exit(-1);
 	}
 
@@ -45,7 +45,7 @@ void KMeansClustering::initialize() {
 	std::random_shuffle(indices.begin(), indices.end());
 	for (int i = 0; i < numberOfClusters; i++) {
 		centroids.push_back(points[indices[i]]);
-		points[indices[i]]->setCluster(i);
+		clusterOfPoint[points[indices[i]]->getID()] = i;
 	}
 }
 
@@ -55,11 +55,11 @@ void KMeansClustering::initialize() {
 void KMeansClustering::assign() {
 	// For every point, find closest centroid
 	for (unsigned int i = 0; i < points.size(); i++) {
-		if (points[i]->getCluster() < 0) { // Unassigned point
+		if (clusterOfPoint[points[i]->getID()] < 0) { // Unassigned point
 			// Find nearest centroid to point
 			double minDist = -1.0;
 			int minIndex = points[i]->findNearest(centroids, minDist, distFun);
-			points[i]->setCluster(minIndex);
+			clusterOfPoint[points[i]->getID()] = minIndex;
 			clusters[minIndex].push_back(points[i]);
 		}
 	}
@@ -111,7 +111,7 @@ unsigned int KMeansClustering::update() {
 				clusters[i].push_back(centroids[i]);
 			}
 			centroids[i] = newCentroids[i];
-			centroids[i]->setCluster(i);
+			clusterOfPoint[centroids[i]->getID()] = i;
 			changesMade++;
 		} else {
 			delete newCentroids[i]; // Not needed any more
@@ -155,7 +155,7 @@ bool KMeansClustering::isCentroid(const DataPoint *x) const {
 void KMeansClustering::resetClusters() {
 	for (unsigned int i = 0; i < points.size(); i++) {
 		if (!isCentroid(points[i])) {
-			points[i]->setCluster(-1);
+			clusterOfPoint[points[i]->getID()] = -1;
 		}
 	}
 
@@ -201,7 +201,7 @@ double KMeansClustering::silhouette(std::vector<double>& clusterSilhouette) cons
 
 double KMeansClustering::silhouetteOfPoint(const DataPoint *p) const {
 	// Calculate average distance of p to other points in same cluster
-	int clusterIndex = p->getCluster();
+	int clusterIndex = clusterOfPoint.at(p->getID());
 	double sum = 0.0;
 	unsigned int pointsInCluster = clusters[clusterIndex].size();
 	for (unsigned int i = 0; i < clusters[clusterIndex].size(); i++) {
@@ -266,4 +266,13 @@ void KMeansClustering::getPointsPerCluster(std::vector< std::vector< std::string
 			results[i].push_back(clusters[i][j]->getID());
 		}
 	}
+}
+
+
+std::vector<DataPoint *> KMeansClustering::getPointsInSameCluster(const DataPoint& p) const {
+	if (clusterOfPoint.find(p.getID()) == clusterOfPoint.end()) {
+		std::vector<DataPoint *> empty;
+		return empty;
+	}
+	return clusters[clusterOfPoint.at(p.getID())];
 }

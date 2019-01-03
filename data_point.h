@@ -9,13 +9,11 @@ private:
 	std::string id;
 	std::vector<double> x;
 	double norm; // Save the point's norm to reduce calculations
-	int cluster;
-	std::vector<DataPoint *> conflicts;
 
 
 	double calculateNorm() const;
 public:
-	DataPoint() : id(""), norm(-1.0), cluster(-1) {}
+	DataPoint() : id(""), norm(-1.0) {}
 	DataPoint(const std::vector<double>&, std::string);
 	// Copy constructor
 	DataPoint(const DataPoint&);
@@ -29,12 +27,6 @@ public:
 	unsigned int getDimensions() const { return x.size(); }
 	std::string getID() const { return id; }
 	double getNorm() const { return norm; }
-	int getCluster() const { return cluster; }
-	void setCluster(int newCluster) { cluster = newCluster;	}
-
-	std::vector<DataPoint *> getConflicts() const { return conflicts; }
-	void addConflict(DataPoint *centroid) { conflicts.push_back(centroid); }
-	void removeConflicts() { conflicts.clear(); }
 
 	void print() const;
 

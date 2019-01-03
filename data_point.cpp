@@ -7,7 +7,7 @@
 #include "metrics.h"
 #include "util.h"
 
-DataPoint::DataPoint(const std::vector<double>& p, std::string id2) : id(id2), cluster(-1) {
+DataPoint::DataPoint(const std::vector<double>& p, std::string id2) : id(id2) {
 	unsigned int i;
 	for (i = 0; i < p.size(); i++) {
 		x.push_back(p[i]);
@@ -16,7 +16,7 @@ DataPoint::DataPoint(const std::vector<double>& p, std::string id2) : id(id2), c
 }
 
 
-DataPoint::DataPoint(const DataPoint& p2) : cluster(-1) {
+DataPoint::DataPoint(const DataPoint& p2) {
 	id = p2.id;
 	unsigned int i;
 	for (i = 0; i < p2.x.size(); i++) {

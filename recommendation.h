@@ -18,7 +18,7 @@ protected:
 	std::vector<double> clustersAverageSentiment;
 private:
 	static const char *PROCESSED_TWEETS_FILENAME;
-	static const unsigned int NUMBER_OF_CLUSTERS = 250;
+	static const unsigned int NUMBER_OF_CLUSTERS = 100;
 	KMeansClustering *kMeans;
 
 	void createUserSentiments(const std::vector<Tweet>&);

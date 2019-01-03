@@ -32,14 +32,12 @@ int LSH::findAllNeighbors(const DataPoint& q, std::vector<DataPoint *>& results,
 	int i;
 	double minDist = -1.0;
 	int minIndex = -1;
-	unsigned int total = 0;
 
 	// Find the neighbors of q in every hash table
 	for (i = 0; i < L; i++) {
 		std::vector<DataPoint *> neighbors;
 		std::vector<double> tempDistances;
 		int tempMinIndex = tables[i]->findNeighbors(q, neighbors, tempDistances);
-		total += neighbors.size();
 
 		// No neighbors found
 		if (tempMinIndex < 0) {

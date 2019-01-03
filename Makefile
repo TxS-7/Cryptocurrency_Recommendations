@@ -1,6 +1,6 @@
 LSH_DIR   = LSH
 LSH_OBJS  = $(LSH_DIR)/LSH.o $(LSH_DIR)/hash_table.o $(LSH_DIR)/cosine_hash_table.o
-OBJS      = main.o tweet.o recommendation.o cosine_lsh_recommendation.o clustering.o data_point.o file_io.o util.o metrics.o
+OBJS      = main.o tweet.o recommendation.o cosine_lsh_recommendation.o clustering_recommendation.o clustering.o data_point.o file_io.o util.o metrics.o
 CC        = g++
 FLAGS     = -Wall -g3 -std=c++11
 
@@ -10,12 +10,15 @@ recommendation: $(LSH_OBJS) $(OBJS)
 	$(CC) -o recommendation $(LSH_OBJS) $(OBJS)
 
 
-main.o: main.cpp tweet.h cosine_lsh_recommendation.h file_io.h util.h
+main.o: main.cpp tweet.h cosine_lsh_recommendation.h clustering_recommendation.h file_io.h util.h
 	$(CC) $(FLAGS) -c main.cpp
 
 
 cosine_lsh_recommendation.o: cosine_lsh_recommendation.cpp cosine_lsh_recommendation.h recommendation.h tweet.h $(LSH_DIR)/LSH.h data_point.h metrics.h util.h
 	$(CC) $(FLAGS) -c cosine_lsh_recommendation.cpp
+
+clustering_recommendation.o: clustering_recommendation.cpp clustering_recommendation.h recommendation.h tweet.h clustering.h data_point.h metrics.h util.h
+	$(CC) $(FLAGS) -c clustering_recommendation.cpp
 
 recommendation.o: recommendation.cpp recommendation.h tweet.h clustering.h data_point.h metrics.h
 	$(CC) $(FLAGS) -c recommendation.cpp

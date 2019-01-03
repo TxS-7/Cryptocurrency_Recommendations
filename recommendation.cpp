@@ -12,7 +12,7 @@
 
 const char *Recommendation::PROCESSED_TWEETS_FILENAME = "datasets/twitter_dataset_small_v2.csv";
 
-Recommendation::Recommendation(const std::vector<Tweet>& tweets) {
+Recommendation::Recommendation(const std::vector<Tweet>& tweets) : kMeans(NULL) {
 	std::cout << "[*] Creating sentiment scores based on users" << std::endl;
 	createUserSentiments(tweets);
 	std::cout << "[*] Creating sentiment scores based on clusters" << std::endl;
@@ -231,15 +231,8 @@ std::vector< std::vector<unsigned int> > Recommendation::recommendations() const
 	std::vector< std::vector<unsigned int> > result2 = clusterBasedRecommendations();
 
 	for (unsigned int i = 0; i < result.size(); i++) {
-		// Used to avoid duplicate coins from user/cluster based recommendations
-		std::set<unsigned int> foundCoins;
-		for (unsigned int j = 0; j < result[i].size(); j++) {
-			foundCoins.insert(result[i][j]);
-		}
 		for (unsigned int j = 0; j < result2[i].size(); j++) {
-			if (foundCoins.insert(result2[i][j]).second != false) {
-				result[i].push_back(result2[i][j]);
-			}
+			result[i].push_back(result2[i][j]);
 		}
 	}
 	return result;
