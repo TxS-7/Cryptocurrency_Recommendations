@@ -1,8 +1,11 @@
 #include <iostream>
 #include <vector>
 #include <unordered_map>
+#include <set>
+#include <utility> // pair
 #include <cstring> // strcmp, strncpy
 #include <climits> // PATH_MAX
+#include <ctime> // clock
 #include "tweet.h"
 #include "cosine_lsh_recommendation.h"
 #include "clustering_recommendation.h"
@@ -97,15 +100,16 @@ int main(int argc, char *argv[]) {
 		return -1;
 	}
 
+	set<unsigned int> userIDs;
 	// Calculate the sentiment for every cryptocoin for every tweet
 	for (unsigned int i = 0; i < tweets.size(); i++) {
 		tweets[i].calculateSentiments(sentimentMap, ALPHA, coins);
+		userIDs.insert(tweets[i].getUser());
 	}
 
 
-	// Create recommendation systems
-	//CosineLSHRecommendation *rec = new CosineLSHRecommendation(tweets, neighbors);
-	ClusteringRecommendation *rec = new ClusteringRecommendation(tweets, 10);
+	// Create recommendation system
+	Recommendation *rec = new CosineLSHRecommendation(tweets, neighbors, 10);
 
 	// Remove previous contents of the output file
 	if (emptyFile(outputFile) == false) {
@@ -114,19 +118,37 @@ int main(int argc, char *argv[]) {
 	}
 
 
-	// Get the recommendations
-	std::vector< std::vector<unsigned int> > userCoins = rec->recommendations();
-	for (unsigned int i = 0; i < userCoins.size(); i++) {
-		cout << "User: " << i << " -> ";
-		for (unsigned int j = 0; j < userCoins[i].size(); j++) {
-			unsigned int coinIndex = userCoins[i][j];
-			cout << coins[coinIndex][0] << " ";
-		}
-		cout << "\n" << endl;
-	}
-	cout << endl;
-	//createResults();
+	clock_t start;
+	clock_t end;
 
+	// Cosine LSH results
+	double cosineLSHTime = 0.0;
+	vector< pair<unsigned int, vector<string> > > cosineLSHResults;
+	cout << "\n[*] Running Cosine LSH Recommendations" << endl;
+	for (auto& user : userIDs) {
+		start = clock();
+		vector<string> results = rec->cosineLSHRecommendations(user, coins);
+		end = clock();
+		cosineLSHTime += ((double) (end - start)) / CLOCKS_PER_SEC;
+		cosineLSHResults.push_back(make_pair(user, results));
+	}
+
+	// Clustering results
+	double clusteringTime = 0.0;
+	vector< pair<unsigned int, vector<string> > > clusteringResults;
+	cout << "\n[*] Running Clustering Recommendations" << endl;
+	for (auto& user : userIDs) {
+		start = clock();
+		vector<string> results = rec->clusteringRecommendations(user, coins);
+		end = clock();
+		clusteringTime += ((double) (end - start)) / CLOCKS_PER_SEC;
+		clusteringResults.push_back(make_pair(user, results));
+	}
+
+	if (writeOutputFile(outputFile, cosineLSHResults, cosineLSHTime, clusteringResults, clusteringTime) == false) {
+		cerr << "[-] Error while writing to the output file: " << outputFile << endl;
+		return -1;
+	}
 
 	cout << "[!] Exiting the program..." << endl;
 	delete rec;

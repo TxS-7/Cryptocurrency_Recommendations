@@ -3,6 +3,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <utility> // std::pair
 #include <cstdlib> // atoi, atof
 #include <set>
 #include <algorithm> // all_of
@@ -194,4 +195,47 @@ bool readCoins(const char *filename, std::vector< std::vector<std::string> >& co
 
 	inputFile.close();
 	return true;
+}
+
+
+bool writeOutputFile(const char *filename, const std::vector< std::pair<unsigned int, std::vector<std::string> > >& cosineLSHResults, double cosineLSHTime, const std::vector< std::pair<unsigned int, std::vector<std::string> > >& clusteringResults, double clusteringTime) {
+	// Open file for writing
+	std::fstream outputFile;
+	outputFile.open(filename, std::fstream::out);
+	if (!outputFile) {
+		return false;
+	}
+
+	// Cosine LSH recommendations
+	outputFile << "Cosine LSH" << std::endl;
+	for (auto& user : cosineLSHResults) {
+		outputFile << user.first << ": ";
+		for (unsigned int j = 0; j < user.second.size(); j++) {
+			outputFile << user.second[j];
+			if (j != user.second.size() - 1) {
+				outputFile << "\t";
+			}
+		}
+		outputFile << std::endl;
+	}
+	outputFile << "Execution Time: " << cosineLSHTime << std::endl;
+
+
+	// Clustering recommendations
+	outputFile << "Clustering" << std::endl;
+	for (auto& user : clusteringResults) {
+		outputFile << user.first << ": ";
+		for (unsigned int j = 0; j < user.second.size(); j++) {
+			outputFile << user.second[j];
+			if (j != user.second.size() - 1) {
+				outputFile << "\t";
+			}
+		}
+		outputFile << std::endl;
+	}
+	outputFile << "Execution Time: " << clusteringTime << std::endl;
+
+	outputFile.close();
+	return true;
+}
 }
