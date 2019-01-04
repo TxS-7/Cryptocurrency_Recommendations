@@ -1,27 +1,36 @@
 LSH_DIR   = LSH
 LSH_OBJS  = $(LSH_DIR)/LSH.o $(LSH_DIR)/hash_table.o $(LSH_DIR)/cosine_hash_table.o
-OBJS      = main.o tweet.o recommendation.o cosine_lsh_recommendation.o clustering_recommendation.o clustering.o data_point.o file_io.o util.o metrics.o
+OBJS      = tweet.o recommendation.o cosine_lsh_recommender.o clustering_recommender.o clustering.o data_point.o file_io.o util.o metrics.o
 CC        = g++
 FLAGS     = -Wall -g3 -std=c++11
 
-all: recommendation
+all: recommendation best_clusters
 
-recommendation: $(LSH_OBJS) $(OBJS)
-	$(CC) -o recommendation $(LSH_OBJS) $(OBJS)
+recommendation: $(LSH_OBJS) $(OBJS) main.o
+	$(CC) -o recommendation $(LSH_OBJS) $(OBJS) main.o
 
 
-main.o: main.cpp tweet.h cosine_lsh_recommendation.h clustering_recommendation.h file_io.h util.h
+main.o: main.cpp tweet.h recommendation.h file_io.h util.h
 	$(CC) $(FLAGS) -c main.cpp
 
 
-cosine_lsh_recommendation.o: cosine_lsh_recommendation.cpp cosine_lsh_recommendation.h recommendation.h tweet.h $(LSH_DIR)/LSH.h data_point.h metrics.h util.h
-	$(CC) $(FLAGS) -c cosine_lsh_recommendation.cpp
+best_clusters: $(LSH_OBJS) $(OBJS) best_clusters.o
+	$(CC) -o best_clusters $(LSH_OBJS) $(OBJS) best_clusters.o
 
-clustering_recommendation.o: clustering_recommendation.cpp clustering_recommendation.h recommendation.h tweet.h clustering.h data_point.h metrics.h util.h
-	$(CC) $(FLAGS) -c clustering_recommendation.cpp
 
-recommendation.o: recommendation.cpp recommendation.h tweet.h clustering.h data_point.h metrics.h
+best_clusters.o: best_clusters.cpp tweet.h recommendation.h clustering_recommender.h file_io.h
+	$(CC) $(FLAGS) -c best_clusters.cpp
+
+
+
+recommendation.o: recommendation.cpp recommendation.h tweet.h clustering.h cosine_lsh_recommender.h data_point.h metrics.h
 	$(CC) $(FLAGS) -c recommendation.cpp
+
+cosine_lsh_recommender.o: cosine_lsh_recommender.cpp cosine_lsh_recommender.h $(LSH_DIR)/LSH.h data_point.h metrics.h util.h
+	$(CC) $(FLAGS) -c cosine_lsh_recommender.cpp
+
+clustering_recommender.o: clustering_recommender.cpp clustering_recommender.h clustering.h data_point.h metrics.h util.h
+	$(CC) $(FLAGS) -c clustering_recommender.cpp
 
 
 

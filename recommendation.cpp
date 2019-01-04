@@ -3,20 +3,29 @@
 #include <vector>
 #include <set>
 #include <unordered_map>
-#include <algorithm> // std::fill
+#include <algorithm> // std::fill, std::random_shuffle
+#include <random>
+#include <chrono>
 #include "recommendation.h"
 #include "tweet.h"
 #include "clustering.h"
+#include "cosine_lsh_recommender.h"
+#include "clustering_recommender.h"
 #include "data_point.h"
 #include "metrics.h"
 
 const char *Recommendation::PROCESSED_TWEETS_FILENAME = "datasets/twitter_dataset_small_v2.csv";
 
-Recommendation::Recommendation(const std::vector<Tweet>& tweets) : kMeans(NULL) {
+Recommendation::Recommendation(const std::vector<Tweet>& tweets, unsigned int neighbors, int numClusters) : kMeans(NULL) {
 	std::cout << "[*] Creating sentiment scores based on users" << std::endl;
 	createUserSentiments(tweets);
 	std::cout << "[*] Creating sentiment scores based on clusters" << std::endl;
 	createClusterSentiments(tweets);
+
+	rec1 = new CosineLSHRecommender(neighbors);
+	rec1->train(userSentiments, usersAverageSentiment, clusterSentiments, clustersAverageSentiment);
+	rec2 = new ClusteringRecommender(numClusters, neighbors);
+	rec2->train(userSentiments, usersAverageSentiment, clusterSentiments, clustersAverageSentiment);
 }
 
 
@@ -44,27 +53,32 @@ void Recommendation::createUserSentiments(const std::vector<Tweet>& tweets) {
 		} else { // New user: save current user sentiment and reset it
 			// Calculate average sentiment of the user
 			double sum = 0.0;
-			bool foundSentiment = false;
+			unsigned int knownCount = 0;
+			bool nonZero = false;
 			for (unsigned int j = 0; j < userSentiment.size(); j++) {
 				if (userSentiment[j] != Tweet::SENTIMENT_NOT_SET) {
-					foundSentiment = true;
+					if (userSentiment[j] != 0) {
+						nonZero = true;
+					}
+					knownCount++;
 					sum += userSentiment[j];
 				}
 			}
 
-			if (foundSentiment) { // Keep only users with at least one sentiments for a coin
-				usersAverageSentiment.push_back(sum / userSentiment.size());
+			if (knownCount > 0 && nonZero) { // Keep only users with at least one sentiments for a coin
+				usersAverageSentiment.push_back(sum / knownCount);
 
-				// Set the coins without sentiment to be equal to the average
-				// so that after the normalization they become 0
+				// Set the coins with unknown rating to the user's average
 				for (unsigned int j = 0; j < userSentiment.size(); j++) {
 					if (userSentiment[j] == Tweet::SENTIMENT_NOT_SET) {
-						userSentiment[j] = sum / userSentiment.size();
+						unknownCoins[currUser].insert(j);
+						userSentiment[j] = sum / knownCount;
 					}
 				}
 
 				DataPoint userPoint(userSentiment, std::to_string(currUser));
 				userSentiments.push_back(userPoint);
+				userToSentiment[currUser] = userSentiments.size() - 1;
 			}
 
 			currUser = tweets[i].getUser();
@@ -77,15 +91,33 @@ void Recommendation::createUserSentiments(const std::vector<Tweet>& tweets) {
 	// Save last user's total sentiment
 	// Calculate average sentiment of the user
 	double sum = 0.0;
+	unsigned int knownCount = 0;
+	bool nonZero = false;
 	for (unsigned int j = 0; j < userSentiment.size(); j++) {
 		if (userSentiment[j] != Tweet::SENTIMENT_NOT_SET) {
+			if (userSentiment[j] != 0) {
+				nonZero = true;
+			}
+			knownCount++;
 			sum += userSentiment[j];
 		}
 	}
-	usersAverageSentiment.push_back(sum / userSentiment.size());
 
-	DataPoint userPoint(userSentiment, std::to_string(tweets[tweets.size()-1].getUser()));
-	userSentiments.push_back(userPoint);
+	if (knownCount > 0 && nonZero) {
+		usersAverageSentiment.push_back(sum / knownCount);
+
+		// Set the coins with unknown rating to the user's average
+		for (unsigned int j = 0; j < userSentiment.size(); j++) {
+			if (userSentiment[j] == Tweet::SENTIMENT_NOT_SET) {
+				unknownCoins[tweets[tweets.size()-1].getUser()].insert(j);
+				userSentiment[j] = sum / knownCount;
+			}
+		}
+
+		DataPoint userPoint(userSentiment, std::to_string(tweets[tweets.size()-1].getUser()));
+		userSentiments.push_back(userPoint);
+		userToSentiment[tweets[tweets.size()-1].getUser()] = userSentiments.size() - 1;
+	}
 }
 
 
@@ -141,26 +173,28 @@ void Recommendation::createClusterSentiments(const std::vector<Tweet>& tweets) {
 
 		// Calculate average sentiment of the cluster
 		double sum = 0.0;
-		bool foundSentiment = false;
+		unsigned int knownCount = 0;
+		bool nonZero = false;
 		for (unsigned int k = 0; k < clusterSentiment.size(); k++) {
 			if (clusterSentiment[k] != Tweet::SENTIMENT_NOT_SET) {
-				foundSentiment = true;
+				if (clusterSentiment[k] != 0) {
+					nonZero = true;
+				}
+				knownCount++;
 				sum += clusterSentiment[k];
 			}
 		}
 
-		if (foundSentiment) {
-			clustersAverageSentiment.push_back(sum / clusterSentiment.size());
+		if (knownCount > 0 && nonZero) {
+			clustersAverageSentiment.push_back(sum / knownCount);
 
-			// Set the coins without sentiment to be equal to the average
-			// so that after the normalization they become 0
-			for (unsigned int k = 0; k < clusterSentiment.size(); k++) {
-				if (clusterSentiment[k] == Tweet::SENTIMENT_NOT_SET) {
-					clusterSentiment[k] = sum / clusterSentiment.size();
+			// Set the coins with unknown rating to the user's average
+			for (unsigned int j = 0; j < clusterSentiment.size(); j++) {
+				if (clusterSentiment[j] == Tweet::SENTIMENT_NOT_SET) {
+					clusterSentiment[j] = sum / knownCount;
 				}
 			}
 
-			// Convert total cluster sentiment vector to DataPoint and store it
 			DataPoint clusterPoint(clusterSentiment, std::to_string(i+1));
 			clusterSentiments.push_back(clusterPoint);
 		}
@@ -224,16 +258,47 @@ bool Recommendation::readProcessedTweets(const char *filename, std::vector<DataP
 
 
 /* Combine user based and cluster based recommendations */
-std::vector< std::vector<unsigned int> > Recommendation::recommendations() const {
-	std::cout << "\nCreating recommendations based on users" << std::endl;
-	std::vector< std::vector<unsigned int> > result = userBasedRecommendations();
-	std::cout << "Creating recommendations based on clusters" << std::endl;
-	std::vector< std::vector<unsigned int> > result2 = clusterBasedRecommendations();
-
-	for (unsigned int i = 0; i < result.size(); i++) {
-		for (unsigned int j = 0; j < result2[i].size(); j++) {
-			result[i].push_back(result2[i][j]);
-		}
+std::vector<std::string> Recommendation::cosineLSHRecommendations(unsigned int userID, const std::vector< std::vector<std::string> >& coins) const {
+	if (userToSentiment.find(userID) == userToSentiment.end()) {
+		std::vector<std::string> empty;
+		return empty;
 	}
-	return result;
+	unsigned int userIndex = userToSentiment.at(userID);
+	std::vector<unsigned int> result = rec1->recommendations(userSentiments[userIndex], unknownCoins.at(userID));
+
+	std::vector<std::string> recommendedCoins;
+	for (unsigned int i = 0; i < result.size(); i++) {
+		recommendedCoins.push_back(coins[result[i]][0]);
+	}
+	return recommendedCoins;
+}
+
+
+
+/* Combine user based and cluster based recommendations */
+std::vector<std::string> Recommendation::clusteringRecommendations(unsigned int userID, const std::vector< std::vector<std::string> >& coins) const {
+	if (userToSentiment.find(userID) == userToSentiment.end()) {
+		std::vector<std::string> empty;
+		return empty;
+	}
+	unsigned int userIndex = userToSentiment.at(userID);
+	std::vector<unsigned int> result = rec2->recommendations(userSentiments[userIndex], unknownCoins.at(userID));
+
+	std::vector<std::string> recommendedCoins;
+	for (unsigned int i = 0; i < result.size(); i++) {
+		recommendedCoins.push_back(coins[result[i]][0]);
+	}
+	return recommendedCoins;
+}
+
+
+
+double Recommendation::validateCosineLSH() const {
+	return -1.0;
+}
+
+
+
+double Recommendation::validateClustering() const {
+	return -1.0;
 }

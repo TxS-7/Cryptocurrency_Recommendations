@@ -210,25 +210,33 @@ bool writeOutputFile(const char *filename, const std::vector< std::pair<unsigned
 	outputFile << "Cosine LSH" << std::endl;
 	for (auto& user : cosineLSHResults) {
 		outputFile << user.first << ": ";
-		for (unsigned int j = 0; j < user.second.size(); j++) {
-			outputFile << user.second[j];
-			if (j != user.second.size() - 1) {
-				outputFile << "\t";
+		if (user.second.size() == 0) {
+			outputFile << "No results";
+		} else {
+			for (unsigned int j = 0; j < user.second.size(); j++) {
+				outputFile << user.second[j];
+				if (j != user.second.size() - 1) {
+					outputFile << "\t";
+				}
 			}
 		}
 		outputFile << std::endl;
 	}
-	outputFile << "Execution Time: " << cosineLSHTime << std::endl;
+	outputFile << "Execution Time: " << cosineLSHTime << "\n" << std::endl;
 
 
 	// Clustering recommendations
 	outputFile << "Clustering" << std::endl;
 	for (auto& user : clusteringResults) {
 		outputFile << user.first << ": ";
-		for (unsigned int j = 0; j < user.second.size(); j++) {
-			outputFile << user.second[j];
-			if (j != user.second.size() - 1) {
-				outputFile << "\t";
+		if (user.second.size() == 0) {
+			outputFile << "No results";
+		} else {
+			for (unsigned int j = 0; j < user.second.size(); j++) {
+				outputFile << user.second[j];
+				if (j != user.second.size() - 1) {
+					outputFile << "\t";
+				}
 			}
 		}
 		outputFile << std::endl;
@@ -237,5 +245,4 @@ bool writeOutputFile(const char *filename, const std::vector< std::pair<unsigned
 
 	outputFile.close();
 	return true;
-}
 }

@@ -7,8 +7,7 @@
 #include <climits> // PATH_MAX
 #include <ctime> // clock
 #include "tweet.h"
-#include "cosine_lsh_recommendation.h"
-#include "clustering_recommendation.h"
+#include "recommendation.h"
 #include "file_io.h"
 #include "util.h"
 
@@ -109,7 +108,7 @@ int main(int argc, char *argv[]) {
 
 
 	// Create recommendation system
-	Recommendation *rec = new CosineLSHRecommendation(tweets, neighbors, 10);
+	Recommendation *rec = new Recommendation(tweets, neighbors, ClusteringRecommender::DEFAULT_CLUSTERS);
 
 	// Remove previous contents of the output file
 	if (emptyFile(outputFile) == false) {
@@ -125,7 +124,7 @@ int main(int argc, char *argv[]) {
 	double cosineLSHTime = 0.0;
 	vector< pair<unsigned int, vector<string> > > cosineLSHResults;
 	cout << "\n[*] Running Cosine LSH Recommendations" << endl;
-	for (auto& user : userIDs) {
+	for (auto user : userIDs) {
 		start = clock();
 		vector<string> results = rec->cosineLSHRecommendations(user, coins);
 		end = clock();
@@ -150,11 +149,18 @@ int main(int argc, char *argv[]) {
 		return -1;
 	}
 
+
+	if (got_validate) {
+		cout << "[*] Performing validation for Cosine LSH" << endl;
+		cout << "Cosine LSH Recommendation MAE: " << rec->validateCosineLSH() << endl;
+		cout << "[*] Performing validation for Clustering" << endl;
+		cout << "Clustering Recommendation MAE: " << rec->validateClustering() << endl;
+	}
+
 	cout << "[!] Exiting the program..." << endl;
 	delete rec;
 	return 0;
 }
-
 
 
 void usage(char *name) {
