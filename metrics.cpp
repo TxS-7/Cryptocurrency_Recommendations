@@ -6,6 +6,11 @@ double Metrics::euclideanDistance(const DataPoint& p1, const DataPoint& p2) {
 }
 
 
+double Metrics::euclideanSimilarity(const DataPoint& p1, const DataPoint& p2) {
+	return 1 / (1 + p1.distance(p2));
+}
+
+
 double Metrics::cosineDistance(const DataPoint& p1, const DataPoint& p2) {
 	double sim = p1.dotProduct(p2) / (p1.getNorm() * p2.getNorm());
 	// Problem with double precision

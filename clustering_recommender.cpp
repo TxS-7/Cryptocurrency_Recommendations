@@ -79,9 +79,9 @@ std::vector<unsigned int> ClusteringRecommender::userBasedRecommendations(const 
 			double z_sum = 0.0;
 			double sum = 0.0;
 			for (unsigned int k = 0; k < neighbors.size(); k++) {
-				z_sum += std::abs(Metrics::cosineSimilarity(user, *neighbors[k]));
+				z_sum += std::abs(Metrics::euclideanSimilarity(user, *neighbors[k]));
 				unsigned int neighborIndex = userToSentiment.at(neighbors[k]->getID());
-				sum += Metrics::cosineSimilarity(user, *neighbors[k]) * (neighbors[k]->at(j) - usersAverageSentiment[neighborIndex]);
+				sum += Metrics::euclideanSimilarity(user, *neighbors[k]) * (neighbors[k]->at(j) - usersAverageSentiment[neighborIndex]);
 			}
 			double z = 1 / z_sum;
 			predictedSentiment += z * sum;
@@ -139,9 +139,9 @@ std::vector<unsigned int> ClusteringRecommender::clusterBasedRecommendations(con
 			for (unsigned int k = 0; k < neighbors.size(); k++) {
 				// Exclude the user
 				if (neighbors[k]->getID() != user.getID()) {
-					z_sum += std::abs(Metrics::cosineSimilarity(user, *neighbors[k]));
+					z_sum += std::abs(Metrics::euclideanSimilarity(user, *neighbors[k]));
 					unsigned int neighborIndex = clusterToSentiment.at(neighbors[k]->getID());
-					sum += Metrics::cosineSimilarity(user, *neighbors[k]) * (neighbors[k]->at(j) - usersAverageSentiment[neighborIndex]);
+					sum += Metrics::euclideanSimilarity(user, *neighbors[k]) * (neighbors[k]->at(j) - usersAverageSentiment[neighborIndex]);
 				}
 			}
 			double z = 1 / z_sum;

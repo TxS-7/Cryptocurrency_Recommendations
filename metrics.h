@@ -11,6 +11,7 @@ public:
 	static const int COSINE = 2;
 
 	static double euclideanDistance(const DataPoint&, const DataPoint&);
+	static double euclideanSimilarity(const DataPoint&, const DataPoint&);
 	static double cosineDistance(const DataPoint&, const DataPoint&);
 	static double cosineSimilarity(const DataPoint&, const DataPoint&);
 };
