@@ -195,7 +195,7 @@ void Recommendation::createClusterSentiments(const std::vector<Tweet>& tweets) {
 				}
 			}
 
-			DataPoint clusterPoint(clusterSentiment, std::to_string(i+1));
+			DataPoint clusterPoint(clusterSentiment, "C-" + std::to_string(i+1));
 			clusterSentiments.push_back(clusterPoint);
 		}
 	}
@@ -237,6 +237,7 @@ bool Recommendation::readProcessedTweets(const char *filename, std::vector<DataP
 
 		// Check if the ID already exists in the non-processed tweets
 		if (existingIDs.insert(point.getID()).second != false) {
+			continue;
 			return false;
 		}
 

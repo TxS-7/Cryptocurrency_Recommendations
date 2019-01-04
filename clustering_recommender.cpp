@@ -13,7 +13,7 @@
 
 const int ClusteringRecommender::DEFAULT_CLUSTERS = -1;
 
-void ClusteringRecommender::train(std::vector<DataPoint>& userSentiments, const std::vector<double>& usersAvg, std::vector<DataPoint>& clusterSentiments, const std::vector<double>& clustersAvg) {
+void ClusteringRecommender::train(std::vector<DataPoint>& userSentiments, const std::vector<double>& usersAvg, std::vector<DataPoint>& clusterSentimentsArg, const std::vector<double>& clustersAvg) {
 	// Save the averages
 	usersAverageSentiment.clear();
 	userToSentiment.clear();
@@ -23,9 +23,10 @@ void ClusteringRecommender::train(std::vector<DataPoint>& userSentiments, const 
 	}
 	clustersAverageSentiment.clear();
 	clusterToSentiment.clear();
-	for (unsigned int i = 0; i < clusterSentiments.size(); i++) {
+	for (unsigned int i = 0; i < clusterSentimentsArg.size(); i++) {
+		clusterSentiments.push_back(clusterSentimentsArg[i]);
 		clustersAverageSentiment.push_back(clustersAvg[i]);
-		clusterToSentiment[clusterSentiments[i].getID()] = i;
+		clusterToSentiment[clusterSentimentsArg[i].getID()] = i;
 	}
 
 
@@ -39,22 +40,12 @@ void ClusteringRecommender::train(std::vector<DataPoint>& userSentiments, const 
 	}
 	realUsersClusters = new KMeansClustering(userSentiments, newNumClusters, Metrics::EUCLIDEAN);
 	realUsersClusters->run();
-
-	if (virtualUsersClusters != NULL) {
-		delete virtualUsersClusters;
-	}
-	newNumClusters = numberOfClusters;
-	if (numberOfClusters == DEFAULT_CLUSTERS) {
-		newNumClusters = clusterSentiments.size() / P;
-	}
-	virtualUsersClusters = new KMeansClustering(clusterSentiments, newNumClusters, Metrics::EUCLIDEAN);
-	virtualUsersClusters->run();
 }
 
 
 
 /* Combine user based and cluster based recommendations */
-std::vector<unsigned int> ClusteringRecommender::recommendations(const DataPoint& user, const std::set<unsigned int>& unknown) const {
+std::vector<unsigned int> ClusteringRecommender::recommendations(const DataPoint& user, const std::set<unsigned int>& unknown) {
 	if (userToSentiment.find(user.getID()) == userToSentiment.end() || unknown.size() == 0) {
 		std::vector<unsigned int> empty;
 		return empty;
@@ -116,13 +107,27 @@ std::vector<unsigned int> ClusteringRecommender::userBasedRecommendations(const 
 
 /* Return the indices of the recommended coins for a user
  * based on total sentiment per user */
-std::vector<unsigned int> ClusteringRecommender::clusterBasedRecommendations(const DataPoint& user, const std::set<unsigned int>& unknown) const {
-	// Get the users in the same cluster as this user
+std::vector<unsigned int> ClusteringRecommender::clusterBasedRecommendations(const DataPoint& user, const std::set<unsigned int>& unknown) {
+	// Perform the clustering of this user with all the virtual users
+	if (virtualUsersClusters != NULL) {
+		delete virtualUsersClusters;
+	}
+	int newNumClusters = numberOfClusters;
+	if (numberOfClusters == DEFAULT_CLUSTERS) {
+		newNumClusters = clusterSentiments.size() / P;
+	}
+	// Add the user to the virtual users
+	clusterSentiments.push_back(user);
+	virtualUsersClusters = new KMeansClustering(clusterSentiments, newNumClusters, Metrics::EUCLIDEAN);
+	virtualUsersClusters->run();
+
+
+	// Get the virtual users in the same cluster as this user
 	unsigned int userIndex = userToSentiment.at(user.getID());
-	std::vector<DataPoint *> neighbors = realUsersClusters->getPointsInSameCluster(user);
+	std::vector<DataPoint *> neighbors = virtualUsersClusters->getPointsInSameCluster(user);
 
 	// Guess the sentiment of coins without sentiment based on the neighbors
-	// and keep the best 5
+	// and keep the best 2
 	std::vector< std::pair<double, unsigned int> > newCoins;
 	for (unsigned int j = 0; j < user.getDimensions(); j++) {
 		if (unknown.find(j) != unknown.end()) {
@@ -132,9 +137,12 @@ std::vector<unsigned int> ClusteringRecommender::clusterBasedRecommendations(con
 			double z_sum = 0.0;
 			double sum = 0.0;
 			for (unsigned int k = 0; k < neighbors.size(); k++) {
-				z_sum += std::abs(Metrics::cosineSimilarity(user, *neighbors[k]));
-				unsigned int neighborIndex = userToSentiment.at(neighbors[k]->getID());
-				sum += Metrics::cosineSimilarity(user, *neighbors[k]) * (neighbors[k]->at(j) - usersAverageSentiment[neighborIndex]);
+				// Exclude the user
+				if (neighbors[k]->getID() != user.getID()) {
+					z_sum += std::abs(Metrics::cosineSimilarity(user, *neighbors[k]));
+					unsigned int neighborIndex = clusterToSentiment.at(neighbors[k]->getID());
+					sum += Metrics::cosineSimilarity(user, *neighbors[k]) * (neighbors[k]->at(j) - usersAverageSentiment[neighborIndex]);
+				}
 			}
 			double z = 1 / z_sum;
 			predictedSentiment += z * sum;
@@ -147,12 +155,14 @@ std::vector<unsigned int> ClusteringRecommender::clusterBasedRecommendations(con
 		return left.first > right.first;
 	});
 
-	// Get the top 5 coins based on sentiment
+	// Get the top 2 coins based on sentiment
 	std::vector<unsigned int> recommendedCoins;
-	for (unsigned int j = 0; j < min(5, newCoins.size()); j++) {
+	for (unsigned int j = 0; j < min(2, newCoins.size()); j++) {
 		recommendedCoins.push_back(newCoins[j].second);
 	}
 
+	// Remove user from virtual users again
+	clusterSentiments.pop_back();
 	return recommendedCoins;
 }
 
