@@ -67,4 +67,4 @@ util.o: util.cpp util.h
 
 
 clean:
-	rm -f $(OBJS) $(LSH_OBJS) recommendation
+	rm -f $(OBJS) $(LSH_OBJS) main.o best_clusters.o recommendation best_clusters

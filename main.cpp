@@ -128,7 +128,7 @@ int main(int argc, char *argv[]) {
 		start = clock();
 		vector<string> results = rec->cosineLSHRecommendations(user, coins);
 		end = clock();
-		cosineLSHTime += ((double) (end - start)) / CLOCKS_PER_SEC;
+		cosineLSHTime += ((double) (end - start)) / (CLOCKS_PER_SEC / 1000);
 		cosineLSHResults.push_back(make_pair(user, results));
 	}
 
@@ -140,7 +140,7 @@ int main(int argc, char *argv[]) {
 		start = clock();
 		vector<string> results = rec->clusteringRecommendations(user, coins);
 		end = clock();
-		clusteringTime += ((double) (end - start)) / CLOCKS_PER_SEC;
+		clusteringTime += ((double) (end - start)) / (CLOCKS_PER_SEC / 1000);
 		clusteringResults.push_back(make_pair(user, results));
 	}
 
