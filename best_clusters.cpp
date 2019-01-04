@@ -57,7 +57,7 @@ int main(int argc, char *argv[]) {
 
 
 	// Create recommendation system
-	Recommendation *rec = new Recommendation(tweets, neighbors, 10);
+	Recommendation *rec = new Recommendation(tweets, neighbors, 10, 10);
 	vector<int> clusterOptions;
 	clusterOptions.push_back(ClusteringRecommender::DEFAULT_CLUSTERS);
 	clusterOptions.push_back(10);

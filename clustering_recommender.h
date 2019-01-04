@@ -10,7 +10,8 @@
 
 class ClusteringRecommender {
 private:
-	int numberOfClusters;
+	int numberOfRealUserClusters;
+	int numberOfVirtualUserClusters;
 	unsigned int P;
 
 	KMeansClustering *realUsersClusters;
@@ -28,8 +29,8 @@ private:
 public:
 	static const int DEFAULT_CLUSTERS;
 
-	ClusteringRecommender(int numClusters, unsigned int PArg)
-		: numberOfClusters(numClusters), P(PArg), realUsersClusters(NULL), virtualUsersClusters(NULL) {}
+	ClusteringRecommender(int userClusters, int virtualClusters, unsigned int PArg)
+		: numberOfRealUserClusters(userClusters), numberOfVirtualUserClusters(virtualClusters), P(PArg), realUsersClusters(NULL), virtualUsersClusters(NULL) {}
 
 	std::vector<unsigned int> recommendations(const DataPoint&, const std::set<unsigned int>&);
 	void train(std::vector<DataPoint>&, const std::vector<double>&, std::vector<DataPoint>&, const std::vector<double>&);

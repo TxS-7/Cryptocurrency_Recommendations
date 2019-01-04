@@ -16,7 +16,7 @@
 
 const char *Recommendation::PROCESSED_TWEETS_FILENAME = "datasets/twitter_dataset_small_v2.csv";
 
-Recommendation::Recommendation(const std::vector<Tweet>& tweets, unsigned int neighbors, int numClusters) : kMeans(NULL) {
+Recommendation::Recommendation(const std::vector<Tweet>& tweets, unsigned int neighbors, int usersNumClusters, int virtualNumClusters) : kMeans(NULL) {
 	std::cout << "[*] Creating sentiment scores based on users" << std::endl;
 	createUserSentiments(tweets);
 	std::cout << "[*] Creating sentiment scores based on clusters" << std::endl;
@@ -24,7 +24,7 @@ Recommendation::Recommendation(const std::vector<Tweet>& tweets, unsigned int ne
 
 	rec1 = new CosineLSHRecommender(neighbors);
 	rec1->train(userSentiments, usersAverageSentiment, clusterSentiments, clustersAverageSentiment);
-	rec2 = new ClusteringRecommender(numClusters, neighbors);
+	rec2 = new ClusteringRecommender(usersNumClusters, virtualNumClusters, neighbors);
 	rec2->train(userSentiments, usersAverageSentiment, clusterSentiments, clustersAverageSentiment);
 }
 
@@ -237,7 +237,6 @@ bool Recommendation::readProcessedTweets(const char *filename, std::vector<DataP
 
 		// Check if the ID already exists in the non-processed tweets
 		if (existingIDs.insert(point.getID()).second != false) {
-			continue;
 			return false;
 		}
 

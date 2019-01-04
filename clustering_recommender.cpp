@@ -34,8 +34,8 @@ void ClusteringRecommender::train(std::vector<DataPoint>& userSentiments, const 
 	if (realUsersClusters != NULL) {
 		delete realUsersClusters;
 	}
-	int newNumClusters = numberOfClusters;
-	if (numberOfClusters == DEFAULT_CLUSTERS) {
+	int newNumClusters = numberOfRealUserClusters;
+	if (numberOfRealUserClusters == DEFAULT_CLUSTERS) {
 		newNumClusters = userSentiments.size() / P;
 	}
 	realUsersClusters = new KMeansClustering(userSentiments, newNumClusters, Metrics::EUCLIDEAN);
@@ -112,8 +112,8 @@ std::vector<unsigned int> ClusteringRecommender::clusterBasedRecommendations(con
 	if (virtualUsersClusters != NULL) {
 		delete virtualUsersClusters;
 	}
-	int newNumClusters = numberOfClusters;
-	if (numberOfClusters == DEFAULT_CLUSTERS) {
+	int newNumClusters = numberOfVirtualUserClusters;
+	if (numberOfVirtualUserClusters == DEFAULT_CLUSTERS) {
 		newNumClusters = clusterSentiments.size() / P;
 	}
 	// Add the user to the virtual users
@@ -178,7 +178,7 @@ std::vector<int> ClusteringRecommender::findBestClusters(const std::vector<int>&
 			num = usersAverageSentiment.size() / P;
 		}
 
-		if ((unsigned int) num <= usersAverageSentiment.size() && num > 0) {
+		if ((unsigned int) num <= usersAverageSentiment.size() && num > 1) {
 			KMeansClustering *clustering = new KMeansClustering(userSentiments, num, Metrics::EUCLIDEAN);
 			clustering->run();
 			
@@ -200,7 +200,7 @@ std::vector<int> ClusteringRecommender::findBestClusters(const std::vector<int>&
 	max = 0.0;
 	maxClusters = 0;
 	for (auto num : options) {
-		if ((unsigned int) num <= clustersAverageSentiment.size() && num > 0) {
+		if ((unsigned int) num <= clustersAverageSentiment.size() && num > 1) {
 			if (num == DEFAULT_CLUSTERS) {
 				num = clustersAverageSentiment.size() / P;
 			}

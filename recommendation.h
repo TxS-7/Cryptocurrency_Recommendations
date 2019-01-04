@@ -14,7 +14,7 @@
 class Recommendation {
 private:
 	static const char *PROCESSED_TWEETS_FILENAME;
-	static const unsigned int NUMBER_OF_CLUSTERS = 10;
+	static const unsigned int NUMBER_OF_CLUSTERS = 100;
 
 	// Total sentiments for each user
 	std::vector<DataPoint> userSentiments;
@@ -36,7 +36,7 @@ private:
 	void createClusterSentiments(const std::vector<Tweet>&);
 	bool readProcessedTweets(const char *, std::vector<DataPoint>&, std::set<std::string>&) const;
 public:
-	Recommendation(const std::vector<Tweet>&, unsigned int, int);
+	Recommendation(const std::vector<Tweet>&, unsigned int, int, int);
 
 	std::vector<std::string> cosineLSHRecommendations(unsigned int, const std::vector< std::vector<std::string> >&) const;
 	std::vector<std::string> clusteringRecommendations(unsigned int, const std::vector< std::vector<std::string> >&) const;
