@@ -34,6 +34,7 @@ public:
 
 	std::vector<unsigned int> recommendations(const DataPoint&, const std::set<unsigned int>&);
 	void train(std::vector<DataPoint>&, const std::vector<double>&, std::vector<DataPoint>&, const std::vector<double>&);
+	std::unordered_map<unsigned int, double> userBasedPredictions(const DataPoint&, const std::set<unsigned int>&) const;
 	std::vector<int> findBestClusters(const std::vector<int>&, std::vector<DataPoint>&, std::vector<DataPoint>&) const;
 
 	~ClusteringRecommender() {

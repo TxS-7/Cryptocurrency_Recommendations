@@ -30,6 +30,8 @@ public:
 
 	void train(std::vector<DataPoint>&, const std::vector<double>&, std::vector<DataPoint>&, const std::vector<double>&);
 	std::vector<unsigned int> recommendations(const DataPoint&, const std::set<unsigned int>&) const;
+	std::unordered_map<unsigned int, double> userBasedPredictions(const DataPoint&, const std::set<unsigned int>&) const;
+	//std::unordered_map<unsigned int, double> clusterBasedPrediction(const DataPoint&, const std::set<unsigned int>&) const;
 
 	~CosineLSHRecommender() {
 		if (userLSH != NULL) {

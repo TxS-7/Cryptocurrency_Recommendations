@@ -14,7 +14,7 @@
 class Recommendation {
 private:
 	static const char *PROCESSED_TWEETS_FILENAME;
-	static const unsigned int NUMBER_OF_CLUSTERS = 100;
+	static const unsigned int NUMBER_OF_CLUSTERS = 10;
 
 	// Total sentiments for each user
 	std::vector<DataPoint> userSentiments;
@@ -43,8 +43,7 @@ public:
 
 	std::vector<int> findBestClusters(const std::vector<int>& options) { return rec2->findBestClusters(options, userSentiments, clusterSentiments); }
 
-	double validateCosineLSH() const;
-	double validateClustering() const;
+	std::vector<double> validate();
 
 	virtual ~Recommendation() {
 		if (kMeans != NULL) {

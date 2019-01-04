@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iomanip> // setprecision
 #include <vector>
 #include <unordered_map>
 #include <set>
@@ -108,7 +109,8 @@ int main(int argc, char *argv[]) {
 
 
 	// Create recommendation system
-	Recommendation *rec = new Recommendation(tweets, neighbors, ClusteringRecommender::DEFAULT_CLUSTERS, 10);
+	//Recommendation *rec = new Recommendation(tweets, neighbors, ClusteringRecommender::DEFAULT_CLUSTERS, 10);
+	Recommendation *rec = new Recommendation(tweets, neighbors, 10, 2);
 
 	// Remove previous contents of the output file
 	if (emptyFile(outputFile) == false) {
@@ -135,7 +137,7 @@ int main(int argc, char *argv[]) {
 	// Clustering results
 	double clusteringTime = 0.0;
 	vector< pair<unsigned int, vector<string> > > clusteringResults;
-	cout << "\n[*] Running Clustering Recommendations" << endl;
+	cout << "[*] Running Clustering Recommendations" << endl;
 	for (auto& user : userIDs) {
 		start = clock();
 		vector<string> results = rec->clusteringRecommendations(user, coins);
@@ -151,10 +153,11 @@ int main(int argc, char *argv[]) {
 
 
 	if (got_validate) {
-		cout << "[*] Performing validation for Cosine LSH" << endl;
-		cout << "Cosine LSH Recommendation MAE: " << rec->validateCosineLSH() << endl;
-		cout << "[*] Performing validation for Clustering" << endl;
-		cout << "Clustering Recommendation MAE: " << rec->validateClustering() << endl;
+		cout << std::setprecision(15) << fixed;
+		cout << "\n[*] Performing validation" << endl;
+		vector<double> result = rec->validate();
+		cout << "Cosine LSH Recommendation MAE: " << result[0] << endl;
+		cout << "Clustering Recommendation MAE: " << result[1] << endl;
 	}
 
 	cout << "[!] Exiting the program..." << endl;

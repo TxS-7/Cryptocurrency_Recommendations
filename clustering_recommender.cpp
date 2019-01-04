@@ -222,3 +222,35 @@ std::vector<int> ClusteringRecommender::findBestClusters(const std::vector<int>&
 	result.push_back(maxClusters);
 	return result;
 }
+
+
+
+/* Return the predicted score for the given unknown coin ratings */
+std::unordered_map<unsigned int, double> ClusteringRecommender::userBasedPredictions(const DataPoint& user, const std::set<unsigned int>& unknown) const {
+	// Get the users in the same cluster as this user
+	unsigned int userIndex = userToSentiment.at(user.getID());
+	std::vector<DataPoint *> neighbors = realUsersClusters->getPointsInSameCluster(user);
+
+	// Guess the sentiment of coins without sentiment based on the neighbors
+	// and keep the best 5
+	std::unordered_map<unsigned int, double> predictions;
+	for (unsigned int j = 0; j < user.getDimensions(); j++) {
+		if (unknown.find(j) != unknown.end()) {
+			double predictedSentiment = usersAverageSentiment[userIndex];
+
+			// Calculate normalizing factor z
+			double z_sum = 0.0;
+			double sum = 0.0;
+			for (unsigned int k = 0; k < neighbors.size(); k++) {
+				z_sum += std::abs(Metrics::euclideanSimilarity(user, *neighbors[k]));
+				unsigned int neighborIndex = userToSentiment.at(neighbors[k]->getID());
+				sum += Metrics::euclideanSimilarity(user, *neighbors[k]) * (neighbors[k]->at(j) - usersAverageSentiment[neighborIndex]);
+			}
+			double z = 1 / z_sum;
+			predictedSentiment += z * sum;
+			predictions[j] = predictedSentiment;
+		}
+	}
+
+	return predictions;
+}

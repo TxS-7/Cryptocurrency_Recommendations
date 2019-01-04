@@ -3,6 +3,7 @@
 #include <vector>
 #include <set>
 #include <unordered_map>
+#include <utility> // std::pair, std::make_pair
 #include <algorithm> // std::fill, std::random_shuffle
 #include <random>
 #include <chrono>
@@ -237,6 +238,7 @@ bool Recommendation::readProcessedTweets(const char *filename, std::vector<DataP
 
 		// Check if the ID already exists in the non-processed tweets
 		if (existingIDs.insert(point.getID()).second != false) {
+			continue;
 			return false;
 		}
 
@@ -293,12 +295,142 @@ std::vector<std::string> Recommendation::clusteringRecommendations(unsigned int 
 
 
 
-double Recommendation::validateCosineLSH() const {
-	return -1.0;
-}
+std::vector<double> Recommendation::validate() {
+	// Total error for each recommendation method
+	std::vector<double> totalError(2);
+	std::fill(totalError.begin(), totalError.end(), 0.0);
 
+	// Create a list of all rated coins of each user and their old rating
+	std::vector< std::pair<unsigned int, unsigned int> > ratedCoins;
+	std::vector< std::unordered_map<unsigned int, double> > oldRatings;
+	std::vector<double> oldAverages;
+	for (unsigned int i = 0; i < userSentiments.size(); i++) {
+		std::unordered_map<unsigned int, double> userRatings;
+		for (unsigned int j = 0; j < userSentiments[i].getDimensions(); j++) {
+			if (unknownCoins[i].find(j) == unknownCoins[i].end()) { // Coin is rated (not in unknown coins)
+				ratedCoins.push_back(std::make_pair(i, j));
+				userRatings[j] = userSentiments[i].at(j);
+			}
+		}
+		oldRatings.push_back(userRatings);
+		oldAverages.push_back(usersAverageSentiment[i]);
+	}
 
+	// Create a vector of all the rated coins indices
+	std::vector<unsigned int> indices;
+	for (unsigned int i = 0; i < ratedCoins.size(); i++) {
+		indices.push_back(i);
+	}
 
-double Recommendation::validateClustering() const {
-	return -1.0;
+	// Create a new map of unrated coins (chosen for validation)
+	std::unordered_map<unsigned int, std::set<unsigned int> > validationCoins;
+
+	// Shuffle the vector
+	srand(time(NULL));
+	std::random_shuffle(indices.begin(), indices.end());
+
+	// Split the set of rated coins to 10 equal size subsets.
+	// Each time the 1/10 is the validation set and the 9/10 is the training set
+	double LSHUserBasedError = 0.0;
+	double clusterUserBasedError = 0.0;
+	unsigned int foldSize = ratedCoins.size() / 10;
+	for (unsigned int fold = 0; fold < 10; fold++) {
+		double LSHDiffSum = 0.0;
+		double clusterDiffSum = 0.0;
+
+		unsigned int start = fold * foldSize;
+		unsigned int end = ((fold != 9) ? start + foldSize : ratedCoins.size());
+
+		// Create the validation set
+		for (unsigned int i = start; i < end; i++) {
+			unsigned int pair = indices[i];
+			unsigned int user = ratedCoins[pair].first;
+			unsigned int coin = ratedCoins[pair].second;
+
+			// Insert the coin in the unknown coins set of the user
+			validationCoins[user].insert(coin);
+		}
+
+		// Calculate the new averages of the users
+		for (unsigned int i = 0; i < userSentiments.size(); i++) {
+			double sum = 0.0;
+			unsigned int knownCount = 0;
+			for (unsigned int j = 0; j < userSentiments[i].getDimensions(); j++) {
+				if (validationCoins[i].find(j) == validationCoins[i].end() && unknownCoins[i].find(j) == unknownCoins[i].end()) {
+					sum += userSentiments[i].at(j);
+					knownCount++;
+				}
+			}
+			usersAverageSentiment[i] = sum / knownCount;
+		}
+
+		// Replace validation coins and unknown coins ratings with new average
+		for (unsigned int i = start; i < end; i++) {
+			unsigned int pair = indices[i];
+			unsigned int user = ratedCoins[pair].first;
+			unsigned int coin = ratedCoins[pair].second;
+
+			userSentiments[user][coin] = usersAverageSentiment[user];
+		}
+		for (unsigned int i = 0; i < userSentiments.size(); i++) {
+			if (unknownCoins.find(i) != unknownCoins.end()) {
+				for (unsigned int j = 0; j < userSentiments[i].getDimensions(); j++) {
+					if (unknownCoins[i].find(j) != unknownCoins[i].end()) {
+						userSentiments[i][j] = usersAverageSentiment[i];
+					}
+				}
+			}
+		}
+
+		// Retrain the recommendation systems with the new data
+		rec1->train(userSentiments, usersAverageSentiment, clusterSentiments, clustersAverageSentiment);
+		rec2->train(userSentiments, usersAverageSentiment, clusterSentiments, clustersAverageSentiment);
+
+		// Get the ratings for the unknown coins
+		for (unsigned int i = 0; i < userSentiments.size(); i++) {
+			if (validationCoins.find(i) != validationCoins.end() && validationCoins.at(i).size() > 0) { // User has at least one unrated coin
+				std::unordered_map<unsigned int, double> LSHResults = rec1->userBasedPredictions(userSentiments[i], validationCoins[i]);
+				std::unordered_map<unsigned int, double> clusterResults = rec2->userBasedPredictions(userSentiments[i], validationCoins[i]);
+				for (unsigned int j = 0; j < userSentiments[i].getDimensions(); j++) {
+					if (validationCoins[i].find(j) != validationCoins[i].end()) {
+						LSHDiffSum += abs(LSHResults[j] - oldRatings[i].at(j));
+						clusterDiffSum += abs(clusterResults[j] - oldRatings[i].at(j));
+						std::cout << LSHResults[j] << "    " << oldRatings[i].at(j) << std::endl;
+						std::cout << LSHDiffSum << "\n\n";
+					}
+				}
+			}
+		}
+
+		LSHUserBasedError += (1.0 / (end - start)) * LSHDiffSum;
+		clusterUserBasedError += (1.0 / (end - start)) * clusterDiffSum;
+
+		// Reset the changed ratings
+		for (unsigned int i = start; i < end; i++) {
+			unsigned int pair = indices[i];
+			unsigned int user = ratedCoins[pair].first;
+			unsigned int coin = ratedCoins[pair].second;
+
+			// Set the rating of the coin to its old value
+			userSentiments[user][coin] = oldRatings[user].at(coin);
+		}
+		// Reset the averages
+		for (unsigned int i = 0; i < usersAverageSentiment.size(); i++) {
+			usersAverageSentiment[i] = oldAverages[i];
+			// Set real unknown ratings to the old average
+			if (unknownCoins.find(i) != unknownCoins.end()) {
+				for (unsigned int j = 0; j < userSentiments[i].getDimensions(); j++) {
+					if (unknownCoins[i].find(j) != unknownCoins[i].end()) {
+						userSentiments[i][j] = oldAverages[i];
+					}
+				}
+			}
+		}
+		validationCoins.clear();
+	}
+	// Average error from all the folds
+	totalError[0] += LSHUserBasedError / 10; // Average error from all the folds
+	totalError[1] += clusterUserBasedError / 10; // Average error from all the folds
+
+	return totalError;
 }
