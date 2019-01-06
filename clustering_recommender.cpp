@@ -4,7 +4,7 @@
 #include <set>
 #include <algorithm> // std::sort
 #include <utility> // std::pair, std::make_pair
-#include <cmath> // abs
+#include <cmath> // std::abs
 #include "clustering_recommender.h"
 #include "clustering.h"
 #include "data_point.h"
@@ -100,11 +100,6 @@ std::vector<unsigned int> ClusteringRecommender::clusterBasedRecommendations(con
 		recommendedCoins.push_back(predictions[j].second);
 	}
 
-	// Remove user from virtual users again
-	clusterSentiments.pop_back();
-
-	delete virtualUsersClusters;
-	virtualUsersClusters = NULL;
 	return recommendedCoins;
 }
 
@@ -116,8 +111,12 @@ std::vector< std::pair<double, unsigned int> > ClusteringRecommender::userBasedP
 	unsigned int userIndex = userToSentiment.at(user.getID());
 	std::vector<DataPoint *> neighbors = realUsersClusters->getPointsInSameCluster(user);
 
-	// Guess the sentiment of coins without sentiment based on the neighbors
 	std::vector< std::pair<double, unsigned int> > predictions;
+	if (neighbors.size() == 0) {
+		return predictions;
+	}
+
+	// Guess the sentiment of coins without sentiment based on the neighbors
 	for (unsigned int j = 0; j < user.getDimensions(); j++) {
 		if (unknown.find(j) != unknown.end()) {
 			double predictedSentiment = usersAverageSentiment[userIndex];
@@ -130,8 +129,14 @@ std::vector< std::pair<double, unsigned int> > ClusteringRecommender::userBasedP
 				unsigned int neighborIndex = userToSentiment.at(neighbors[k]->getID());
 				sum += Metrics::euclideanSimilarity(user, *neighbors[k]) * (neighbors[k]->at(j) - usersAverageSentiment[neighborIndex]);
 			}
+
 			double z = 1 / z_sum;
 			predictedSentiment += z * sum;
+			if (std::isnan(predictedSentiment)) {
+				std::cout << z << "    " << sum << std::endl;
+				user.print();
+				exit(-1);
+			}
 			predictions.push_back(std::make_pair(predictedSentiment, j));
 		}
 	}
@@ -158,9 +163,16 @@ std::vector< std::pair<double, unsigned int> > ClusteringRecommender::clusterBas
 	unsigned int userIndex = userToSentiment.at(user.getID());
 	std::vector<DataPoint *> neighbors = virtualUsersClusters->getPointsInSameCluster(user);
 
+	std::vector< std::pair<double, unsigned int> > predictions;
+	if (neighbors.size() == 0) {
+		// Remove user from virtual users again
+		clusterSentiments.pop_back();
+		delete virtualUsersClusters;
+		virtualUsersClusters = NULL;
+		return predictions;
+	}
 
 	// Guess the sentiment of coins without sentiment based on the neighbors
-	std::vector< std::pair<double, unsigned int> > predictions;
 	for (unsigned int j = 0; j < user.getDimensions(); j++) {
 		if (unknown.find(j) != unknown.end()) {
 			double predictedSentiment = usersAverageSentiment[userIndex];
@@ -173,14 +185,21 @@ std::vector< std::pair<double, unsigned int> > ClusteringRecommender::clusterBas
 				if (neighbors[k]->getID() != user.getID()) {
 					z_sum += std::abs(Metrics::euclideanSimilarity(user, *neighbors[k]));
 					unsigned int neighborIndex = clusterToSentiment.at(neighbors[k]->getID());
-					sum += Metrics::euclideanSimilarity(user, *neighbors[k]) * (neighbors[k]->at(j) - usersAverageSentiment[neighborIndex]);
+					sum += Metrics::euclideanSimilarity(user, *neighbors[k]) * (neighbors[k]->at(j) - clustersAverageSentiment[neighborIndex]);
 				}
 			}
+
 			double z = 1 / z_sum;
 			predictedSentiment += z * sum;
 			predictions.push_back(std::make_pair(predictedSentiment, j));
 		}
 	}
+
+	// Remove user from virtual users again
+	clusterSentiments.pop_back();
+
+	delete virtualUsersClusters;
+	virtualUsersClusters = NULL;
 
 	return predictions;
 }

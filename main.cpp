@@ -109,8 +109,8 @@ int main(int argc, char *argv[]) {
 
 
 	// Create recommendation system
-	//Recommendation *rec = new Recommendation(tweets, neighbors, ClusteringRecommender::DEFAULT_CLUSTERS, 10);
-	Recommendation *rec = new Recommendation(tweets, neighbors, 10, 2);
+	Recommendation *rec = new Recommendation(tweets, neighbors, ClusteringRecommender::DEFAULT_CLUSTERS, 10);
+	//Recommendation *rec = new Recommendation(tweets, neighbors, 10, 2);
 
 	// Remove previous contents of the output file
 	if (emptyFile(outputFile) == false) {

@@ -14,7 +14,7 @@
 class Recommendation {
 private:
 	static const char *PROCESSED_TWEETS_FILENAME;
-	static const unsigned int NUMBER_OF_CLUSTERS = 10;
+	static const unsigned int NUMBER_OF_CLUSTERS = 100;
 
 	// Total sentiments for each user
 	std::vector<DataPoint> userSentiments;

@@ -239,7 +239,7 @@ bool Recommendation::readProcessedTweets(const char *filename, std::vector<DataP
 
 		// Check if the ID already exists in the non-processed tweets
 		if (existingIDs.insert(point.getID()).second != false) {
-			continue;
+			//continue;
 			return false;
 		}
 
@@ -336,7 +336,7 @@ std::vector<double> Recommendation::validate() {
 	double clusterUserBasedError = 0.0;
 	unsigned int foldSize = ratedCoins.size() / 10;
 	for (unsigned int fold = 0; fold < 10; fold++) {
-		std::cout << "Validation for fold: " << fold + 1 << "/10" << std::endl;
+		std::cout << "Validation fold: " << fold + 1 << "/10" << std::endl;
 
 		double LSHDiffSum = 0.0;
 		double clusterDiffSum = 0.0;
@@ -399,22 +399,21 @@ std::vector<double> Recommendation::validate() {
 			if (validationCoins.find(i) != validationCoins.end() && validationCoins.at(i).size() > 0) { // User has at least one unrated coin
 				std::vector< std::pair<double, unsigned int> > LSHResults = rec1->userBasedPredictions(userSentiments[i], validationCoins[i]);
 				std::vector< std::pair<double, unsigned int> > clusterResults = rec2->userBasedPredictions(userSentiments[i], validationCoins[i]);
+				// Cosine LSH recommendation error
 				for (unsigned int j = 0; j < LSHResults.size(); j++) {
-					unsigned int coin = LSHResults[j].second; // Same as clusterResults[j].second
-					if (coin != clusterResults[j].second) {
-						std::cout << "AAAA" << std::endl;
-						//exit(-1);
-					}
+					unsigned int coin = LSHResults[j].second;
 					if (validationCoins[i].find(coin) != validationCoins[i].end()) {
 						LSHDiffSum += std::abs(LSHResults[j].first - oldRatings[i].at(coin));
+					} else {
+						std::cout << "BBBB" << std::endl;
+						exit(-2);
+					}
+				}
+				// Clustering recommendation error
+				for (unsigned int j = 0; j < clusterResults.size(); j++) {
+					unsigned int coin = clusterResults[j].second;
+					if (validationCoins[i].find(coin) != validationCoins[i].end()) {
 						clusterDiffSum += std::abs(clusterResults[j].first - oldRatings[i].at(coin));
-						//std::cout << LSHResults[j].first << "    " << oldRatings[i].at(coin) << std::endl;
-						//std::cout << "DIFF: " << LSHDiffSum << "\n\n";
-						if (std::isnan(clusterDiffSum)) {
-							userSentiments[i].print();
-							std::cout << "Average: " << usersAverageSentiment[i] << std::endl;
-							//exit(-1);
-						}
 					} else {
 						std::cout << "BBBB" << std::endl;
 						exit(-2);
@@ -449,6 +448,7 @@ std::vector<double> Recommendation::validate() {
 		}
 		validationCoins.clear();
 	}
+	std::cout << std::endl;
 	// Average error from all the folds
 	totalError[0] += LSHUserBasedError / 10; // Average error from all the folds
 	totalError[1] += clusterUserBasedError / 10; // Average error from all the folds

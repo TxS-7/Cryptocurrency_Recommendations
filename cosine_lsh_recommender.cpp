@@ -115,6 +115,12 @@ std::vector< std::pair<double, unsigned int> > CosineLSHRecommender::userBasedPr
 	std::vector<double> distances;
 	userLSH->findAllNeighbors(user, neighbors, distances);
 
+	std::vector< std::pair<double, unsigned int> > predictions;
+	if (neighbors.size() == 0) {
+		return predictions;
+	}
+
+
 	// Sort the neighbors by distance and keep the top P neighbors excluding the user himself
 	std::vector< std::pair<double, unsigned int> > distancesAndIndices;
 	// Create the vector of distances and indices used to find the indices of the closest neighbors
@@ -135,7 +141,6 @@ std::vector< std::pair<double, unsigned int> > CosineLSHRecommender::userBasedPr
 
 
 	// Guess the sentiment of coins without sentiment based on the neighbors
-	std::vector< std::pair<double, unsigned int> > predictions;
 	for (unsigned int j = 0; j < user.getDimensions(); j++) {
 		if (unknown.find(j) != unknown.end()) {
 			double predictedSentiment = usersAverageSentiment[userIndex];
@@ -165,16 +170,18 @@ std::vector< std::pair<double, unsigned int> > CosineLSHRecommender::clusterBase
 	unsigned int userIndex = userToSentiment.at(user.getID());
 	std::vector<DataPoint *> neighbors;
 	std::vector<double> distances;
-	userLSH->findAllNeighbors(user, neighbors, distances);
+	clusterLSH->findAllNeighbors(user, neighbors, distances);
+
+	std::vector< std::pair<double, unsigned int> > predictions;
+	if (neighbors.size() == 0) {
+		return predictions;
+	}
 
 	// Sort the neighbors by distance and keep the top P neighbors
 	std::vector< std::pair<double, unsigned int> > distancesAndIndices;
 	// Create the vector of distances and indices used to find the indices of the closest neighbors
 	for (unsigned int j = 0; j < distances.size(); j++) {
-		// Exclude the same user
-		if (neighbors[j]->getID() != user.getID()) {
-			distancesAndIndices.push_back(std::make_pair(distances[j], j));
-		}
+		distancesAndIndices.push_back(std::make_pair(distances[j], j));
 	}
 
 	std::sort(distancesAndIndices.begin(), distancesAndIndices.end());
@@ -187,7 +194,6 @@ std::vector< std::pair<double, unsigned int> > CosineLSHRecommender::clusterBase
 
 
 	// Guess the sentiment of coins without sentiment based on the neighbors
-	std::vector< std::pair<double, unsigned int> > predictions;
 	for (unsigned int j = 0; j < user.getDimensions(); j++) {
 		if (unknown.find(j) != unknown.end()) {
 			double predictedSentiment = usersAverageSentiment[userIndex];
@@ -197,8 +203,8 @@ std::vector< std::pair<double, unsigned int> > CosineLSHRecommender::clusterBase
 			double sum = 0.0;
 			for (unsigned int k = 0; k < closest.size(); k++) {
 				z_sum += std::abs(Metrics::cosineSimilarity(user, *closest[k]));
-				unsigned int neighborIndex = userToSentiment.at(closest[k]->getID());
-				sum += Metrics::cosineSimilarity(user, *closest[k]) * (closest[k]->at(j) - usersAverageSentiment[neighborIndex]);
+				unsigned int neighborIndex = clusterToSentiment.at(closest[k]->getID());
+				sum += Metrics::cosineSimilarity(user, *closest[k]) * (closest[k]->at(j) - clustersAverageSentiment[neighborIndex]);
 			}
 			double z = 1 / z_sum;
 			predictedSentiment += z * sum;
