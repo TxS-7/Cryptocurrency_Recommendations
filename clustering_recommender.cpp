@@ -61,21 +61,68 @@ std::vector<unsigned int> ClusteringRecommender::recommendations(const DataPoint
 
 
 
-/* Return the indices of the recommended coins for a user
+/* Return the indices of the recommended coins for a user (top 5)
  * based on total sentiment per user */
 std::vector<unsigned int> ClusteringRecommender::userBasedRecommendations(const DataPoint& user, const std::set<unsigned int>& unknown) const {
+	// Get the predicted ratings of the unrated coins
+	std::vector< std::pair<double, unsigned int> > predictions = userBasedPredictions(user, unknown);
+
+	// Sort in descending order using lambda
+	std::sort(predictions.begin(), predictions.end(), [](const std::pair<double, unsigned int>& left, const std::pair<double, unsigned int>& right) {
+		return left.first > right.first;
+	});
+
+	// Get the top 5 coins based on sentiment
+	std::vector<unsigned int> recommendedCoins;
+	for (unsigned int j = 0; j < min(5, predictions.size()); j++) {
+		recommendedCoins.push_back(predictions[j].second);
+	}
+
+	return recommendedCoins;
+}
+
+
+
+/* Return the indices of the recommended coins for a user (top 2)
+ * based on total sentiment per user */
+std::vector<unsigned int> ClusteringRecommender::clusterBasedRecommendations(const DataPoint& user, const std::set<unsigned int>& unknown) {
+	// Get the predicted ratings of the unrated coins
+	std::vector< std::pair<double, unsigned int> > predictions = clusterBasedPredictions(user, unknown);
+
+	// Sort in descending order using lambda
+	std::sort(predictions.begin(), predictions.end(), [](const std::pair<double, unsigned int>& left, const std::pair<double, unsigned int>& right) {
+		return left.first > right.first;
+	});
+
+	// Get the top 2 coins based on sentiment
+	std::vector<unsigned int> recommendedCoins;
+	for (unsigned int j = 0; j < min(2, predictions.size()); j++) {
+		recommendedCoins.push_back(predictions[j].second);
+	}
+
+	// Remove user from virtual users again
+	clusterSentiments.pop_back();
+
+	delete virtualUsersClusters;
+	virtualUsersClusters = NULL;
+	return recommendedCoins;
+}
+
+
+
+/* Return the predicted score for the given unknown coin ratings */
+std::vector< std::pair<double, unsigned int> > ClusteringRecommender::userBasedPredictions(const DataPoint& user, const std::set<unsigned int>& unknown) const {
 	// Get the users in the same cluster as this user
 	unsigned int userIndex = userToSentiment.at(user.getID());
 	std::vector<DataPoint *> neighbors = realUsersClusters->getPointsInSameCluster(user);
 
 	// Guess the sentiment of coins without sentiment based on the neighbors
-	// and keep the best 5
-	std::vector< std::pair<double, unsigned int> > newCoins;
+	std::vector< std::pair<double, unsigned int> > predictions;
 	for (unsigned int j = 0; j < user.getDimensions(); j++) {
 		if (unknown.find(j) != unknown.end()) {
 			double predictedSentiment = usersAverageSentiment[userIndex];
 
-			// Calculate normalizing factor z
+			// Calculate normalizing factor z and ratings
 			double z_sum = 0.0;
 			double sum = 0.0;
 			for (unsigned int k = 0; k < neighbors.size(); k++) {
@@ -85,33 +132,18 @@ std::vector<unsigned int> ClusteringRecommender::userBasedRecommendations(const 
 			}
 			double z = 1 / z_sum;
 			predictedSentiment += z * sum;
-			newCoins.push_back(std::make_pair(predictedSentiment, j));
+			predictions.push_back(std::make_pair(predictedSentiment, j));
 		}
 	}
 
-	// Sort in descending order using lambda
-	std::sort(newCoins.begin(), newCoins.end(), [](const std::pair<double, unsigned int>& left, const std::pair<double, unsigned int>& right) {
-		return left.first > right.first;
-	});
-
-	// Get the top 5 coins based on sentiment
-	std::vector<unsigned int> recommendedCoins;
-	for (unsigned int j = 0; j < min(5, newCoins.size()); j++) {
-		recommendedCoins.push_back(newCoins[j].second);
-	}
-
-	return recommendedCoins;
+	return predictions;
 }
 
 
 
-/* Return the indices of the recommended coins for a user
- * based on total sentiment per user */
-std::vector<unsigned int> ClusteringRecommender::clusterBasedRecommendations(const DataPoint& user, const std::set<unsigned int>& unknown) {
+/* Return the predicted score for the given unknown coin ratings */
+std::vector< std::pair<double, unsigned int> > ClusteringRecommender::clusterBasedPredictions(const DataPoint& user, const std::set<unsigned int>& unknown) {
 	// Perform the clustering of this user with all the virtual users
-	if (virtualUsersClusters != NULL) {
-		delete virtualUsersClusters;
-	}
 	int newNumClusters = numberOfVirtualUserClusters;
 	if (numberOfVirtualUserClusters == DEFAULT_CLUSTERS) {
 		newNumClusters = clusterSentiments.size() / P;
@@ -126,14 +158,14 @@ std::vector<unsigned int> ClusteringRecommender::clusterBasedRecommendations(con
 	unsigned int userIndex = userToSentiment.at(user.getID());
 	std::vector<DataPoint *> neighbors = virtualUsersClusters->getPointsInSameCluster(user);
 
+
 	// Guess the sentiment of coins without sentiment based on the neighbors
-	// and keep the best 2
-	std::vector< std::pair<double, unsigned int> > newCoins;
+	std::vector< std::pair<double, unsigned int> > predictions;
 	for (unsigned int j = 0; j < user.getDimensions(); j++) {
 		if (unknown.find(j) != unknown.end()) {
 			double predictedSentiment = usersAverageSentiment[userIndex];
 
-			// Calculate normalizing factor z
+			// Calculate normalizing factor z and ratings
 			double z_sum = 0.0;
 			double sum = 0.0;
 			for (unsigned int k = 0; k < neighbors.size(); k++) {
@@ -146,24 +178,11 @@ std::vector<unsigned int> ClusteringRecommender::clusterBasedRecommendations(con
 			}
 			double z = 1 / z_sum;
 			predictedSentiment += z * sum;
-			newCoins.push_back(std::make_pair(predictedSentiment, j));
+			predictions.push_back(std::make_pair(predictedSentiment, j));
 		}
 	}
 
-	// Sort in descending order using lambda
-	std::sort(newCoins.begin(), newCoins.end(), [](const std::pair<double, unsigned int>& left, const std::pair<double, unsigned int>& right) {
-		return left.first > right.first;
-	});
-
-	// Get the top 2 coins based on sentiment
-	std::vector<unsigned int> recommendedCoins;
-	for (unsigned int j = 0; j < min(2, newCoins.size()); j++) {
-		recommendedCoins.push_back(newCoins[j].second);
-	}
-
-	// Remove user from virtual users again
-	clusterSentiments.pop_back();
-	return recommendedCoins;
+	return predictions;
 }
 
 
@@ -221,36 +240,4 @@ std::vector<int> ClusteringRecommender::findBestClusters(const std::vector<int>&
 	}
 	result.push_back(maxClusters);
 	return result;
-}
-
-
-
-/* Return the predicted score for the given unknown coin ratings */
-std::unordered_map<unsigned int, double> ClusteringRecommender::userBasedPredictions(const DataPoint& user, const std::set<unsigned int>& unknown) const {
-	// Get the users in the same cluster as this user
-	unsigned int userIndex = userToSentiment.at(user.getID());
-	std::vector<DataPoint *> neighbors = realUsersClusters->getPointsInSameCluster(user);
-
-	// Guess the sentiment of coins without sentiment based on the neighbors
-	// and keep the best 5
-	std::unordered_map<unsigned int, double> predictions;
-	for (unsigned int j = 0; j < user.getDimensions(); j++) {
-		if (unknown.find(j) != unknown.end()) {
-			double predictedSentiment = usersAverageSentiment[userIndex];
-
-			// Calculate normalizing factor z
-			double z_sum = 0.0;
-			double sum = 0.0;
-			for (unsigned int k = 0; k < neighbors.size(); k++) {
-				z_sum += std::abs(Metrics::euclideanSimilarity(user, *neighbors[k]));
-				unsigned int neighborIndex = userToSentiment.at(neighbors[k]->getID());
-				sum += Metrics::euclideanSimilarity(user, *neighbors[k]) * (neighbors[k]->at(j) - usersAverageSentiment[neighborIndex]);
-			}
-			double z = 1 / z_sum;
-			predictedSentiment += z * sum;
-			predictions[j] = predictedSentiment;
-		}
-	}
-
-	return predictions;
 }

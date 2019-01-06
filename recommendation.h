@@ -26,7 +26,9 @@ private:
 	std::vector<double> clustersAverageSentiment;
 	KMeansClustering *kMeans;
 
+	// Used to convert user ID to sentiment vector index
 	std::unordered_map<unsigned int, unsigned int> userToSentiment;
+	// Unrated coins for each user
 	std::unordered_map<unsigned int, std::set<unsigned int> > unknownCoins;
 
 	CosineLSHRecommender *rec1;

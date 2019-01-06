@@ -7,6 +7,7 @@
 #include <algorithm> // std::fill, std::random_shuffle
 #include <random>
 #include <chrono>
+#include <cmath> // std::abs
 #include "recommendation.h"
 #include "tweet.h"
 #include "clustering.h"
@@ -335,6 +336,8 @@ std::vector<double> Recommendation::validate() {
 	double clusterUserBasedError = 0.0;
 	unsigned int foldSize = ratedCoins.size() / 10;
 	for (unsigned int fold = 0; fold < 10; fold++) {
+		std::cout << "Validation for fold: " << fold + 1 << "/10" << std::endl;
+
 		double LSHDiffSum = 0.0;
 		double clusterDiffSum = 0.0;
 
@@ -361,7 +364,12 @@ std::vector<double> Recommendation::validate() {
 					knownCount++;
 				}
 			}
-			usersAverageSentiment[i] = sum / knownCount;
+
+			if (knownCount == 0) { // Exclude users with no remaining coins
+				validationCoins.erase(i);
+			} else {
+				usersAverageSentiment[i] = sum / knownCount;
+			}
 		}
 
 		// Replace validation coins and unknown coins ratings with new average
@@ -389,14 +397,27 @@ std::vector<double> Recommendation::validate() {
 		// Get the ratings for the unknown coins
 		for (unsigned int i = 0; i < userSentiments.size(); i++) {
 			if (validationCoins.find(i) != validationCoins.end() && validationCoins.at(i).size() > 0) { // User has at least one unrated coin
-				std::unordered_map<unsigned int, double> LSHResults = rec1->userBasedPredictions(userSentiments[i], validationCoins[i]);
-				std::unordered_map<unsigned int, double> clusterResults = rec2->userBasedPredictions(userSentiments[i], validationCoins[i]);
-				for (unsigned int j = 0; j < userSentiments[i].getDimensions(); j++) {
-					if (validationCoins[i].find(j) != validationCoins[i].end()) {
-						LSHDiffSum += abs(LSHResults[j] - oldRatings[i].at(j));
-						clusterDiffSum += abs(clusterResults[j] - oldRatings[i].at(j));
-						std::cout << LSHResults[j] << "    " << oldRatings[i].at(j) << std::endl;
-						std::cout << LSHDiffSum << "\n\n";
+				std::vector< std::pair<double, unsigned int> > LSHResults = rec1->userBasedPredictions(userSentiments[i], validationCoins[i]);
+				std::vector< std::pair<double, unsigned int> > clusterResults = rec2->userBasedPredictions(userSentiments[i], validationCoins[i]);
+				for (unsigned int j = 0; j < LSHResults.size(); j++) {
+					unsigned int coin = LSHResults[j].second; // Same as clusterResults[j].second
+					if (coin != clusterResults[j].second) {
+						std::cout << "AAAA" << std::endl;
+						//exit(-1);
+					}
+					if (validationCoins[i].find(coin) != validationCoins[i].end()) {
+						LSHDiffSum += std::abs(LSHResults[j].first - oldRatings[i].at(coin));
+						clusterDiffSum += std::abs(clusterResults[j].first - oldRatings[i].at(coin));
+						//std::cout << LSHResults[j].first << "    " << oldRatings[i].at(coin) << std::endl;
+						//std::cout << "DIFF: " << LSHDiffSum << "\n\n";
+						if (std::isnan(clusterDiffSum)) {
+							userSentiments[i].print();
+							std::cout << "Average: " << usersAverageSentiment[i] << std::endl;
+							//exit(-1);
+						}
+					} else {
+						std::cout << "BBBB" << std::endl;
+						exit(-2);
 					}
 				}
 			}

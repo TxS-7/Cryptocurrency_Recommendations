@@ -5,6 +5,7 @@
 #include <string>
 #include <unordered_map>
 #include <set>
+#include <utility> // std::pair
 #include "clustering.h"
 #include "data_point.h"
 
@@ -34,7 +35,8 @@ public:
 
 	std::vector<unsigned int> recommendations(const DataPoint&, const std::set<unsigned int>&);
 	void train(std::vector<DataPoint>&, const std::vector<double>&, std::vector<DataPoint>&, const std::vector<double>&);
-	std::unordered_map<unsigned int, double> userBasedPredictions(const DataPoint&, const std::set<unsigned int>&) const;
+	std::vector< std::pair<double, unsigned int> > userBasedPredictions(const DataPoint&, const std::set<unsigned int>&) const;
+	std::vector< std::pair<double, unsigned int> > clusterBasedPredictions(const DataPoint&, const std::set<unsigned int>&);
 	std::vector<int> findBestClusters(const std::vector<int>&, std::vector<DataPoint>&, std::vector<DataPoint>&) const;
 
 	~ClusteringRecommender() {

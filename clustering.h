@@ -19,7 +19,7 @@ private:
 	int numberOfClusters;
 	std::vector< std::vector<DataPoint *> > clusters;
 
-	// Map point ID with cluster index
+	// Map point ID to cluster index
 	std::unordered_map<std::string, int> clusterOfPoint;
 
 	void initialize();
