@@ -116,10 +116,6 @@ std::vector< std::pair<double, unsigned int> > CosineLSHRecommender::userBasedPr
 	userLSH->findAllNeighbors(user, neighbors, distances);
 
 	std::vector< std::pair<double, unsigned int> > predictions;
-	if (neighbors.size() == 0) {
-		return predictions;
-	}
-
 
 	// Sort the neighbors by distance and keep the top P neighbors excluding the user himself
 	std::vector< std::pair<double, unsigned int> > distancesAndIndices;
@@ -129,6 +125,11 @@ std::vector< std::pair<double, unsigned int> > CosineLSHRecommender::userBasedPr
 		if (neighbors[j]->getID() != user.getID()) {
 			distancesAndIndices.push_back(std::make_pair(distances[j], j));
 		}
+	}
+
+	// No neighbors or only same user
+	if (distancesAndIndices.size() == 0) {
+		return predictions; // Empty
 	}
 
 	std::sort(distancesAndIndices.begin(), distancesAndIndices.end());
@@ -153,7 +154,13 @@ std::vector< std::pair<double, unsigned int> > CosineLSHRecommender::userBasedPr
 				unsigned int neighborIndex = userToSentiment.at(closest[k]->getID());
 				sum += Metrics::cosineSimilarity(user, *closest[k]) * (closest[k]->at(j) - usersAverageSentiment[neighborIndex]);
 			}
-			double z = 1 / z_sum;
+
+			double z;
+			if (z_sum != 0) { // Similarity with every point is 0
+				z = 1 / z_sum;
+			} else {
+				z = 1;
+			}
 			predictedSentiment += z * sum;
 			predictions.push_back(std::make_pair(predictedSentiment, j));
 		}
@@ -206,7 +213,13 @@ std::vector< std::pair<double, unsigned int> > CosineLSHRecommender::clusterBase
 				unsigned int neighborIndex = clusterToSentiment.at(closest[k]->getID());
 				sum += Metrics::cosineSimilarity(user, *closest[k]) * (closest[k]->at(j) - clustersAverageSentiment[neighborIndex]);
 			}
-			double z = 1 / z_sum;
+
+			double z;
+			if (z_sum != 0) {
+				z = 1 / z_sum;
+			} else {
+				z = 1;
+			}
 			predictedSentiment += z * sum;
 			predictions.push_back(std::make_pair(predictedSentiment, j));
 		}

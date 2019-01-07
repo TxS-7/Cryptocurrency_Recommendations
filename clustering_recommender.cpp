@@ -112,7 +112,7 @@ std::vector< std::pair<double, unsigned int> > ClusteringRecommender::userBasedP
 	std::vector<DataPoint *> neighbors = realUsersClusters->getPointsInSameCluster(user);
 
 	std::vector< std::pair<double, unsigned int> > predictions;
-	if (neighbors.size() == 0) {
+	if (neighbors.size() < 2) { // Nothing in cluster or only user
 		return predictions;
 	}
 
@@ -125,18 +125,16 @@ std::vector< std::pair<double, unsigned int> > ClusteringRecommender::userBasedP
 			double z_sum = 0.0;
 			double sum = 0.0;
 			for (unsigned int k = 0; k < neighbors.size(); k++) {
-				z_sum += std::abs(Metrics::euclideanSimilarity(user, *neighbors[k]));
-				unsigned int neighborIndex = userToSentiment.at(neighbors[k]->getID());
-				sum += Metrics::euclideanSimilarity(user, *neighbors[k]) * (neighbors[k]->at(j) - usersAverageSentiment[neighborIndex]);
+				// Exclude same user
+				if (neighbors[k]->getID() != user.getID()) {
+					z_sum += std::abs(Metrics::euclideanSimilarity(user, *neighbors[k]));
+					unsigned int neighborIndex = userToSentiment.at(neighbors[k]->getID());
+					sum += Metrics::euclideanSimilarity(user, *neighbors[k]) * (neighbors[k]->at(j) - usersAverageSentiment[neighborIndex]);
+				}
 			}
 
 			double z = 1 / z_sum;
 			predictedSentiment += z * sum;
-			if (std::isnan(predictedSentiment)) {
-				std::cout << z << "    " << sum << std::endl;
-				user.print();
-				exit(-1);
-			}
 			predictions.push_back(std::make_pair(predictedSentiment, j));
 		}
 	}
@@ -164,7 +162,7 @@ std::vector< std::pair<double, unsigned int> > ClusteringRecommender::clusterBas
 	std::vector<DataPoint *> neighbors = virtualUsersClusters->getPointsInSameCluster(user);
 
 	std::vector< std::pair<double, unsigned int> > predictions;
-	if (neighbors.size() == 0) {
+	if (neighbors.size() < 2) { // Nothing in cluster or only user
 		// Remove user from virtual users again
 		clusterSentiments.pop_back();
 		delete virtualUsersClusters;

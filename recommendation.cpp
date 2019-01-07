@@ -67,6 +67,8 @@ void Recommendation::createUserSentiments(const std::vector<Tweet>& tweets) {
 				}
 			}
 
+			//std::cout << usersAverageSentiment.size() + 1 << " KNOWN: " << knownCount << std::endl;
+
 			if (knownCount > 0 && nonZero) { // Keep only users with at least one sentiments for a coin
 				usersAverageSentiment.push_back(sum / knownCount);
 
@@ -306,9 +308,10 @@ std::vector<double> Recommendation::validate() {
 	std::vector< std::unordered_map<unsigned int, double> > oldRatings;
 	std::vector<double> oldAverages;
 	for (unsigned int i = 0; i < userSentiments.size(); i++) {
+		unsigned int userID = atoi(userSentiments[i].getID().c_str());
 		std::unordered_map<unsigned int, double> userRatings;
 		for (unsigned int j = 0; j < userSentiments[i].getDimensions(); j++) {
-			if (unknownCoins[i].find(j) == unknownCoins[i].end()) { // Coin is rated (not in unknown coins)
+			if (unknownCoins[userID].find(j) == unknownCoins[userID].end()) { // Coin is rated (not in unknown coins)
 				ratedCoins.push_back(std::make_pair(i, j));
 				userRatings[j] = userSentiments[i].at(j);
 			}
@@ -323,9 +326,6 @@ std::vector<double> Recommendation::validate() {
 		indices.push_back(i);
 	}
 
-	// Create a new map of unrated coins (chosen for validation)
-	std::unordered_map<unsigned int, std::set<unsigned int> > validationCoins;
-
 	// Shuffle the vector
 	srand(time(NULL));
 	std::random_shuffle(indices.begin(), indices.end());
@@ -338,6 +338,9 @@ std::vector<double> Recommendation::validate() {
 	for (unsigned int fold = 0; fold < 10; fold++) {
 		std::cout << "Validation fold: " << fold + 1 << "/10" << std::endl;
 
+		// Create a new map of unrated coins (chosen for validation)
+		std::unordered_map<unsigned int, std::set<unsigned int> > validationCoins;
+
 		double LSHDiffSum = 0.0;
 		double clusterDiffSum = 0.0;
 
@@ -348,25 +351,27 @@ std::vector<double> Recommendation::validate() {
 		for (unsigned int i = start; i < end; i++) {
 			unsigned int pair = indices[i];
 			unsigned int user = ratedCoins[pair].first;
+			unsigned int userID = atoi(userSentiments[user].getID().c_str());
 			unsigned int coin = ratedCoins[pair].second;
 
 			// Insert the coin in the unknown coins set of the user
-			validationCoins[user].insert(coin);
+			validationCoins[userID].insert(coin);
 		}
 
 		// Calculate the new averages of the users
 		for (unsigned int i = 0; i < userSentiments.size(); i++) {
+			unsigned int userID = atoi(userSentiments[i].getID().c_str());
 			double sum = 0.0;
 			unsigned int knownCount = 0;
 			for (unsigned int j = 0; j < userSentiments[i].getDimensions(); j++) {
-				if (validationCoins[i].find(j) == validationCoins[i].end() && unknownCoins[i].find(j) == unknownCoins[i].end()) {
+				if (validationCoins[userID].find(j) == validationCoins[userID].end() && unknownCoins[userID].find(j) == unknownCoins[userID].end()) {
 					sum += userSentiments[i].at(j);
 					knownCount++;
 				}
 			}
 
 			if (knownCount == 0) { // Exclude users with no remaining coins
-				validationCoins.erase(i);
+				validationCoins.erase(userID);
 			} else {
 				usersAverageSentiment[i] = sum / knownCount;
 			}
@@ -381,9 +386,10 @@ std::vector<double> Recommendation::validate() {
 			userSentiments[user][coin] = usersAverageSentiment[user];
 		}
 		for (unsigned int i = 0; i < userSentiments.size(); i++) {
-			if (unknownCoins.find(i) != unknownCoins.end()) {
+			unsigned int userID = atoi(userSentiments[i].getID().c_str());
+			if (unknownCoins.find(userID) != unknownCoins.end()) {
 				for (unsigned int j = 0; j < userSentiments[i].getDimensions(); j++) {
-					if (unknownCoins[i].find(j) != unknownCoins[i].end()) {
+					if (unknownCoins[userID].find(j) != unknownCoins[userID].end()) {
 						userSentiments[i][j] = usersAverageSentiment[i];
 					}
 				}
@@ -396,28 +402,19 @@ std::vector<double> Recommendation::validate() {
 
 		// Get the ratings for the unknown coins
 		for (unsigned int i = 0; i < userSentiments.size(); i++) {
-			if (validationCoins.find(i) != validationCoins.end() && validationCoins.at(i).size() > 0) { // User has at least one unrated coin
-				std::vector< std::pair<double, unsigned int> > LSHResults = rec1->userBasedPredictions(userSentiments[i], validationCoins[i]);
-				std::vector< std::pair<double, unsigned int> > clusterResults = rec2->userBasedPredictions(userSentiments[i], validationCoins[i]);
+			unsigned int userID = atoi(userSentiments[i].getID().c_str());
+			if (validationCoins.find(userID) != validationCoins.end() && validationCoins.at(userID).size() > 0) { // User has at least one unrated coin
+				std::vector< std::pair<double, unsigned int> > LSHResults = rec1->userBasedPredictions(userSentiments[i], validationCoins[userID]);
+				std::vector< std::pair<double, unsigned int> > clusterResults = rec2->userBasedPredictions(userSentiments[i], validationCoins[userID]);
 				// Cosine LSH recommendation error
 				for (unsigned int j = 0; j < LSHResults.size(); j++) {
 					unsigned int coin = LSHResults[j].second;
-					if (validationCoins[i].find(coin) != validationCoins[i].end()) {
-						LSHDiffSum += std::abs(LSHResults[j].first - oldRatings[i].at(coin));
-					} else {
-						std::cout << "BBBB" << std::endl;
-						exit(-2);
-					}
+					LSHDiffSum += std::abs(LSHResults[j].first - oldRatings[i].at(coin));
 				}
 				// Clustering recommendation error
 				for (unsigned int j = 0; j < clusterResults.size(); j++) {
 					unsigned int coin = clusterResults[j].second;
-					if (validationCoins[i].find(coin) != validationCoins[i].end()) {
-						clusterDiffSum += std::abs(clusterResults[j].first - oldRatings[i].at(coin));
-					} else {
-						std::cout << "BBBB" << std::endl;
-						exit(-2);
-					}
+					clusterDiffSum += std::abs(clusterResults[j].first - oldRatings[i].at(coin));
 				}
 			}
 		}
@@ -436,17 +433,17 @@ std::vector<double> Recommendation::validate() {
 		}
 		// Reset the averages
 		for (unsigned int i = 0; i < usersAverageSentiment.size(); i++) {
+			unsigned int userID = atoi(userSentiments[i].getID().c_str());
 			usersAverageSentiment[i] = oldAverages[i];
 			// Set real unknown ratings to the old average
 			if (unknownCoins.find(i) != unknownCoins.end()) {
 				for (unsigned int j = 0; j < userSentiments[i].getDimensions(); j++) {
-					if (unknownCoins[i].find(j) != unknownCoins[i].end()) {
+					if (unknownCoins[userID].find(j) != unknownCoins[userID].end()) {
 						userSentiments[i][j] = oldAverages[i];
 					}
 				}
 			}
 		}
-		validationCoins.clear();
 	}
 	std::cout << std::endl;
 	// Average error from all the folds
