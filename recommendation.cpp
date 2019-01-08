@@ -347,8 +347,8 @@ std::vector<double> Recommendation::validateMethodA() {
 
 	// Split the set of rated coins to 10 equal size subsets.
 	// Each time the 1/10 is the validation set and the 9/10 is the training set
-	double LSHUserBasedError = 0.0;
-	double clusterUserBasedError = 0.0;
+	double LSHError = 0.0;
+	double clusterError = 0.0;
 	unsigned int foldSize = ratedCoins.size() / 10;
 	for (unsigned int fold = 0; fold < 10; fold++) {
 		std::cout << "Validation fold: " << fold + 1 << "/10" << std::endl;
@@ -438,8 +438,8 @@ std::vector<double> Recommendation::validateMethodA() {
 			}
 		}
 
-		LSHUserBasedError += (1.0 / (end - start)) * LSHDiffSum;
-		clusterUserBasedError += (1.0 / (end - start)) * clusterDiffSum;
+		LSHError += (1.0 / (end - start)) * LSHDiffSum;
+		clusterError += (1.0 / (end - start)) * clusterDiffSum;
 
 		// Reset the changed ratings
 		for (unsigned int i = start; i < end; i++) {
@@ -466,8 +466,8 @@ std::vector<double> Recommendation::validateMethodA() {
 	}
 
 	// Average error from all the folds
-	totalError[0] += LSHUserBasedError / 10; // Average error from all the folds
-	totalError[1] += clusterUserBasedError / 10; // Average error from all the folds
+	totalError[0] += LSHError / 10; // Average error from all the folds
+	totalError[1] += clusterError / 10; // Average error from all the folds
 
 	return totalError;
 }
@@ -506,8 +506,8 @@ std::vector<double> Recommendation::validateMethodB() {
 	}
 
 	// Choose a random 1/10 of the dataset to predict 10 times
-	double LSHUserBasedError = 0.0;
-	double clusterUserBasedError = 0.0;
+	double LSHError = 0.0;
+	double clusterError = 0.0;
 	unsigned int J = ratedCoins.size() / 10;
 	srand(time(NULL));
 	for (unsigned int iteration = 0; iteration < 10; iteration++) {
@@ -601,8 +601,8 @@ std::vector<double> Recommendation::validateMethodB() {
 			}
 		}
 
-		LSHUserBasedError += (1.0 / J) * LSHDiffSum;
-		clusterUserBasedError += (1.0 / J) * clusterDiffSum;
+		LSHError += (1.0 / J) * LSHDiffSum;
+		clusterError += (1.0 / J) * clusterDiffSum;
 
 		// Reset the changed ratings
 		for (unsigned int i = start; i < end; i++) {
@@ -629,8 +629,8 @@ std::vector<double> Recommendation::validateMethodB() {
 	}
 
 	// Average error from all the iterations
-	totalError[0] += LSHUserBasedError / 10;
-	totalError[1] += clusterUserBasedError / 10;
+	totalError[0] += LSHError / 10;
+	totalError[1] += clusterError / 10;
 
 	return totalError;
 }
