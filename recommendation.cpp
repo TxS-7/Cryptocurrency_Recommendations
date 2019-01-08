@@ -67,8 +67,6 @@ void Recommendation::createUserSentiments(const std::vector<Tweet>& tweets) {
 				}
 			}
 
-			//std::cout << usersAverageSentiment.size() + 1 << " KNOWN: " << knownCount << std::endl;
-
 			if (knownCount > 0 && nonZero) { // Keep only users with at least one sentiments for a coin
 				usersAverageSentiment.push_back(sum / knownCount);
 
@@ -363,14 +361,18 @@ std::vector<double> Recommendation::validate() {
 			unsigned int userID = atoi(userSentiments[i].getID().c_str());
 			double sum = 0.0;
 			unsigned int knownCount = 0;
+			bool nonZero = false; // At least one non-neutral rating
 			for (unsigned int j = 0; j < userSentiments[i].getDimensions(); j++) {
 				if (validationCoins[userID].find(j) == validationCoins[userID].end() && unknownCoins[userID].find(j) == unknownCoins[userID].end()) {
+					if (userSentiments[i].at(j) != 0) {
+						nonZero = true;
+					}
 					sum += userSentiments[i].at(j);
 					knownCount++;
 				}
 			}
 
-			if (knownCount == 0) { // Exclude users with no remaining coins
+			if (knownCount == 0 || !nonZero) { // Exclude users with no remaining coins or neutral rating for all rated coins
 				validationCoins.erase(userID);
 			} else {
 				usersAverageSentiment[i] = sum / knownCount;
@@ -436,7 +438,7 @@ std::vector<double> Recommendation::validate() {
 			unsigned int userID = atoi(userSentiments[i].getID().c_str());
 			usersAverageSentiment[i] = oldAverages[i];
 			// Set real unknown ratings to the old average
-			if (unknownCoins.find(i) != unknownCoins.end()) {
+			if (unknownCoins.find(userID) != unknownCoins.end()) {
 				for (unsigned int j = 0; j < userSentiments[i].getDimensions(); j++) {
 					if (unknownCoins[userID].find(j) != unknownCoins[userID].end()) {
 						userSentiments[i][j] = oldAverages[i];
