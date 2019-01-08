@@ -37,6 +37,9 @@ private:
 	void createUserSentiments(const std::vector<Tweet>&);
 	void createClusterSentiments(const std::vector<Tweet>&);
 	bool readProcessedTweets(const char *, std::vector<DataPoint>&, std::set<std::string>&) const;
+
+	std::vector<double> validateMethodA();
+	std::vector<double> validateMethodB();
 public:
 	Recommendation(const std::vector<Tweet>&, unsigned int, int, int);
 

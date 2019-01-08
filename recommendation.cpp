@@ -296,8 +296,25 @@ std::vector<std::string> Recommendation::clusteringRecommendations(unsigned int 
 
 
 
+/* Validate methods A and B using Cosine LSH and Clustering recommendation systems */
 std::vector<double> Recommendation::validate() {
-	// Total error for each recommendation method
+	std::vector<double> methodAResults = validateMethodA();
+	std::vector<double> methodBResults = validateMethodB();
+
+	// Get the average for each recommendation system
+	std::vector<double> result(2);
+	result[0] = (methodAResults[0] + methodBResults[0]) / 2;
+	result[1] = (methodAResults[1] + methodBResults[1]) / 2;
+	return result;
+}
+
+
+
+/* 10-fold cross validation for user based predictions for each recommendation system */
+std::vector<double> Recommendation::validateMethodA() {
+	std::cout << "\n[*] Method A validation:" << std::endl;
+
+	// Total error for each recommendation system
 	std::vector<double> totalError(2);
 	std::fill(totalError.begin(), totalError.end(), 0.0);
 
@@ -447,10 +464,173 @@ std::vector<double> Recommendation::validate() {
 			}
 		}
 	}
-	std::cout << std::endl;
+
 	// Average error from all the folds
 	totalError[0] += LSHUserBasedError / 10; // Average error from all the folds
 	totalError[1] += clusterUserBasedError / 10; // Average error from all the folds
+
+	return totalError;
+}
+
+
+
+/* Validation for cluster based predictions for each recommendation system */
+std::vector<double> Recommendation::validateMethodB() {
+	std::cout << "\n[*] Method B validation:" << std::endl;
+
+	// Total error for each recommendation system
+	std::vector<double> totalError(2);
+	std::fill(totalError.begin(), totalError.end(), 0.0);
+
+	// Create a list of all rated coins of each user and their old rating
+	std::vector< std::pair<unsigned int, unsigned int> > ratedCoins;
+	std::vector< std::unordered_map<unsigned int, double> > oldRatings;
+	std::vector<double> oldAverages;
+	for (unsigned int i = 0; i < userSentiments.size(); i++) {
+		unsigned int userID = atoi(userSentiments[i].getID().c_str());
+		std::unordered_map<unsigned int, double> userRatings;
+		for (unsigned int j = 0; j < userSentiments[i].getDimensions(); j++) {
+			if (unknownCoins[userID].find(j) == unknownCoins[userID].end()) { // Coin is rated (not in unknown coins)
+				ratedCoins.push_back(std::make_pair(i, j));
+				userRatings[j] = userSentiments[i].at(j);
+			}
+		}
+		oldRatings.push_back(userRatings);
+		oldAverages.push_back(usersAverageSentiment[i]);
+	}
+
+	// Create a vector of all the rated coins indices
+	std::vector<unsigned int> indices;
+	for (unsigned int i = 0; i < ratedCoins.size(); i++) {
+		indices.push_back(i);
+	}
+
+	// Choose a random 1/10 of the dataset to predict 10 times
+	double LSHUserBasedError = 0.0;
+	double clusterUserBasedError = 0.0;
+	unsigned int J = ratedCoins.size() / 10;
+	srand(time(NULL));
+	for (unsigned int iteration = 0; iteration < 10; iteration++) {
+		// Shuffle the vector
+		std::random_shuffle(indices.begin(), indices.end());
+
+		std::cout << "Iteration: " << iteration + 1 << "/10" << std::endl;
+
+		// Create a new map of unrated coins (chosen for validation)
+		std::unordered_map<unsigned int, std::set<unsigned int> > validationCoins;
+
+		double LSHDiffSum = 0.0;
+		double clusterDiffSum = 0.0;
+
+		unsigned int start = 0;
+		unsigned int end = start + J;
+
+		// Create the validation set from the shuffled vector
+		for (unsigned int i = start; i < end; i++) {
+			unsigned int pair = indices[i];
+			unsigned int user = ratedCoins[pair].first;
+			unsigned int userID = atoi(userSentiments[user].getID().c_str());
+			unsigned int coin = ratedCoins[pair].second;
+
+			// Insert the coin in the unknown coins set of the user
+			validationCoins[userID].insert(coin);
+		}
+
+		// Calculate the new averages of the users
+		for (unsigned int i = 0; i < userSentiments.size(); i++) {
+			unsigned int userID = atoi(userSentiments[i].getID().c_str());
+			double sum = 0.0;
+			unsigned int knownCount = 0;
+			bool nonZero = false; // At least one non-neutral rating
+			for (unsigned int j = 0; j < userSentiments[i].getDimensions(); j++) {
+				if (validationCoins[userID].find(j) == validationCoins[userID].end() && unknownCoins[userID].find(j) == unknownCoins[userID].end()) {
+					if (userSentiments[i].at(j) != 0) {
+						nonZero = true;
+					}
+					sum += userSentiments[i].at(j);
+					knownCount++;
+				}
+			}
+
+			if (knownCount == 0 || !nonZero) { // Exclude users with no remaining coins or neutral rating for all rated coins
+				validationCoins.erase(userID);
+			} else {
+				usersAverageSentiment[i] = sum / knownCount;
+			}
+		}
+
+		// Replace validation coins and unknown coins ratings with new average
+		for (unsigned int i = start; i < end; i++) {
+			unsigned int pair = indices[i];
+			unsigned int user = ratedCoins[pair].first;
+			unsigned int coin = ratedCoins[pair].second;
+
+			userSentiments[user][coin] = usersAverageSentiment[user];
+		}
+		for (unsigned int i = 0; i < userSentiments.size(); i++) {
+			unsigned int userID = atoi(userSentiments[i].getID().c_str());
+			if (unknownCoins.find(userID) != unknownCoins.end()) {
+				for (unsigned int j = 0; j < userSentiments[i].getDimensions(); j++) {
+					if (unknownCoins[userID].find(j) != unknownCoins[userID].end()) {
+						userSentiments[i][j] = usersAverageSentiment[i];
+					}
+				}
+			}
+		}
+
+		// Retrain the recommendation systems with the new data
+		rec1->train(userSentiments, usersAverageSentiment, clusterSentiments, clustersAverageSentiment);
+		rec2->train(userSentiments, usersAverageSentiment, clusterSentiments, clustersAverageSentiment);
+
+		// Get the ratings for the unknown coins
+		for (unsigned int i = 0; i < userSentiments.size(); i++) {
+			unsigned int userID = atoi(userSentiments[i].getID().c_str());
+			if (validationCoins.find(userID) != validationCoins.end() && validationCoins.at(userID).size() > 0) { // User has at least one unrated coin
+				std::vector< std::pair<double, unsigned int> > LSHResults = rec1->clusterBasedPredictions(userSentiments[i], validationCoins[userID]);
+				std::vector< std::pair<double, unsigned int> > clusterResults = rec2->clusterBasedPredictions(userSentiments[i], validationCoins[userID]);
+				// Cosine LSH recommendation error
+				for (unsigned int j = 0; j < LSHResults.size(); j++) {
+					unsigned int coin = LSHResults[j].second;
+					LSHDiffSum += std::abs(LSHResults[j].first - oldRatings[i].at(coin));
+				}
+				// Clustering recommendation error
+				for (unsigned int j = 0; j < clusterResults.size(); j++) {
+					unsigned int coin = clusterResults[j].second;
+					clusterDiffSum += std::abs(clusterResults[j].first - oldRatings[i].at(coin));
+				}
+			}
+		}
+
+		LSHUserBasedError += (1.0 / J) * LSHDiffSum;
+		clusterUserBasedError += (1.0 / J) * clusterDiffSum;
+
+		// Reset the changed ratings
+		for (unsigned int i = start; i < end; i++) {
+			unsigned int pair = indices[i];
+			unsigned int user = ratedCoins[pair].first;
+			unsigned int coin = ratedCoins[pair].second;
+
+			// Set the rating of the coin to its old value
+			userSentiments[user][coin] = oldRatings[user].at(coin);
+		}
+		// Reset the averages
+		for (unsigned int i = 0; i < usersAverageSentiment.size(); i++) {
+			unsigned int userID = atoi(userSentiments[i].getID().c_str());
+			usersAverageSentiment[i] = oldAverages[i];
+			// Set real unknown ratings to the old average
+			if (unknownCoins.find(userID) != unknownCoins.end()) {
+				for (unsigned int j = 0; j < userSentiments[i].getDimensions(); j++) {
+					if (unknownCoins[userID].find(j) != unknownCoins[userID].end()) {
+						userSentiments[i][j] = oldAverages[i];
+					}
+				}
+			}
+		}
+	}
+
+	// Average error from all the iterations
+	totalError[0] += LSHUserBasedError / 10;
+	totalError[1] += clusterUserBasedError / 10;
 
 	return totalError;
 }
