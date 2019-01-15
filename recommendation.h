@@ -5,6 +5,7 @@
 #include <string>
 #include <unordered_map>
 #include <set>
+#include <utility> // std::pair
 #include "tweet.h"
 #include "clustering.h"
 #include "cosine_lsh_recommender.h"
@@ -48,7 +49,7 @@ public:
 
 	std::vector<int> findBestClusters(const std::vector<int>& options) { return rec2->findBestClusters(options, userSentiments, clusterSentiments); }
 
-	std::vector<double> validate();
+	std::vector< std::pair<double, double> > validate();
 
 	virtual ~Recommendation() {
 		if (kMeans != NULL) {

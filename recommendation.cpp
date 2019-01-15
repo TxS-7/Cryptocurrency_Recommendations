@@ -297,14 +297,16 @@ std::vector<std::string> Recommendation::clusteringRecommendations(unsigned int 
 
 
 /* Validate methods A and B using Cosine LSH and Clustering recommendation systems */
-std::vector<double> Recommendation::validate() {
+std::vector< std::pair<double, double> > Recommendation::validate() {
 	std::vector<double> methodAResults = validateMethodA();
 	std::vector<double> methodBResults = validateMethodB();
 
-	// Get the average for each recommendation system
-	std::vector<double> result(2);
-	result[0] = (methodAResults[0] + methodBResults[0]) / 2;
-	result[1] = (methodAResults[1] + methodBResults[1]) / 2;
+	// Get the error for each recommendation system and each method
+	std::vector< std::pair<double, double> > result(2);
+	result[0].first = methodAResults[0];
+	result[0].second = methodBResults[0];
+	result[1].first = methodAResults[1];
+	result[1].second = methodBResults[1];
 	return result;
 }
 

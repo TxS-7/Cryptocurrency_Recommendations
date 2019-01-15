@@ -155,9 +155,9 @@ int main(int argc, char *argv[]) {
 	if (got_validate) {
 		cout << std::setprecision(15) << fixed;
 		cout << "\n[*] Performing validation" << endl;
-		vector<double> result = rec->validate();
-		cout << "Cosine LSH Recommendation MAE: " << result[0] << endl;
-		cout << "Clustering Recommendation MAE: " << result[1] << endl;
+		vector< pair<double, double> > result = rec->validate();
+		cout << "Cosine LSH Recommendation MAE: (A) " << result[0].first << " | (B) " << result[0].second << endl;
+		cout << "Clustering Recommendation MAE: (A) " << result[1].first << " | (B) " << result[1].second << endl;
 	}
 
 	cout << "[!] Exiting the program..." << endl;
